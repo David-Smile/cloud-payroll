@@ -13,7 +13,8 @@ import {
   Edit,
   Trash2,
   X,
-  Settings
+  Settings,
+  Printer
 } from 'lucide-react';
 import './App.css';
 
@@ -209,6 +210,114 @@ function App() {
     a.download = `payroll_report_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const handlePrintPayroll = () => {
+    // Create a print-friendly version of the payroll report
+    const printWindow = window.open('', '_blank');
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payroll Report - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+            .summary { margin-bottom: 30px; }
+            .summary h3 { color: #333; }
+            .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+            .summary-item { padding: 10px; background: #f8f9fa; border-radius: 5px; }
+            .summary-item strong { color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .total-row { font-weight: bold; background-color: #f8f9fa; }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Payroll Report</h1>
+            <p>Period: ${payrollPeriod} | Generated: ${new Date().toLocaleDateString()}</p>
+          </div>
+          
+          <div class="summary">
+            <h3>Payroll Summary</h3>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <strong>Total Employees:</strong> ${payrollStats.activeEmployees}
+              </div>
+              <div class="summary-item">
+                <strong>Gross Pay:</strong> $${payrollStats.totalPayroll.toLocaleString()}
+              </div>
+              <div class="summary-item">
+                <strong>Estimated Taxes:</strong> $${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}
+              </div>
+              <div class="summary-item">
+                <strong>Benefits:</strong> $${Math.round(payrollStats.totalPayroll * 0.15).toLocaleString()}
+              </div>
+            </div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Position</th>
+                <th>Department</th>
+                <th>Gross Pay</th>
+                <th>Taxes</th>
+                <th>Benefits</th>
+                <th>Net Pay</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${employees.filter(emp => emp.status === 'active').map(emp => {
+                const grossPay = emp.salary / 12;
+                const taxes = grossPay * 0.25;
+                const benefits = grossPay * 0.15;
+                const netPay = grossPay - taxes - benefits;
+                return `
+                  <tr>
+                    <td>${emp.name}</td>
+                    <td>${emp.position}</td>
+                    <td>${emp.department}</td>
+                    <td>$${grossPay.toLocaleString()}</td>
+                    <td>$${taxes.toLocaleString()}</td>
+                    <td>$${benefits.toLocaleString()}</td>
+                    <td>$${netPay.toLocaleString()}</td>
+                  </tr>
+                `;
+              }).join('')}
+              <tr class="total-row">
+                <td colspan="3"><strong>Total</strong></td>
+                <td><strong>$${payrollStats.totalPayroll.toLocaleString()}</strong></td>
+                <td><strong>$${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}</strong></td>
+                <td><strong>$${Math.round(payrollStats.totalPayroll * 0.15).toLocaleString()}</strong></td>
+                <td><strong>$${Math.round(payrollStats.totalPayroll * 0.6).toLocaleString()}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 30px; text-align: center; color: #666; font-size: 12px;">
+            <p>This report was generated on ${new Date().toLocaleString()}</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Wait for content to load then print
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   };
 
   const handlePayrollPeriodChange = (period) => {
@@ -1409,23 +1518,6 @@ function App() {
                 <h1 className="text-2xl font-bold text-gray-900">Payroll Management</h1>
                 <p className="text-gray-600 mt-1">Process payroll, view payment history, and manage employee compensation</p>
               </div>
-              <button 
-                onClick={handleProcessPayroll}
-                disabled={processingPayroll}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {processingPayroll ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4" />
-                    <span>Process Payroll</span>
-                  </>
-                )}
-              </button>
             </div>
 
             {/* Payroll Statistics */}
@@ -1594,6 +1686,12 @@ function App() {
                   >
                     Export Report
                   </button>
+                  <button 
+                    onClick={handlePrintPayroll}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Print Report
+                  </button>
                 </div>
               </div>
             </div>
@@ -1650,10 +1748,278 @@ function App() {
         )}
 
         {activeTab === 'reports' && (
-          <div className="text-center py-12">
-            <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Reports</h3>
-            <p className="mt-1 text-sm text-gray-500">Reporting and analytics coming soon.</p>
+          <div className="space-y-6">
+            {/* Reports Header */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
+                <p className="text-gray-600 mt-1">Generate comprehensive reports and view analytics</p>
+              </div>
+              <button 
+                onClick={() => {
+                  const csvContent = [
+                    ['Report Type', 'Generated Date', 'Total Employees', 'Total Payroll'],
+                    ['Payroll Summary', new Date().toLocaleDateString(), payrollStats.totalEmployees, `$${payrollStats.totalPayroll.toLocaleString()}`],
+                    ['Employee Summary', new Date().toLocaleDateString(), payrollStats.totalEmployees, 'N/A'],
+                    ['Tax Summary', new Date().toLocaleDateString(), payrollStats.activeEmployees, `$${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}`],
+                  ].map(row => row.join(',')).join('\n');
+
+                  const blob = new Blob([csvContent], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `reports_summary_${new Date().toISOString().split('T')[0]}.csv`;
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                }}
+                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export All Reports</span>
+              </button>
+            </div>
+
+            {/* Report Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Payroll Report Card */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <DollarSign className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const csvContent = [
+                        ['Employee', 'Position', 'Salary', 'Monthly Pay', 'Taxes', 'Benefits', 'Net Pay'],
+                        ...employees.map(emp => {
+                          const monthlyPay = emp.salary / 12;
+                          const taxes = monthlyPay * 0.25;
+                          const benefits = monthlyPay * 0.15;
+                          const netPay = monthlyPay - taxes - benefits;
+                          return [
+                            emp.name,
+                            emp.position,
+                            emp.salary,
+                            monthlyPay.toLocaleString(),
+                            taxes.toLocaleString(),
+                            benefits.toLocaleString(),
+                            netPay.toLocaleString()
+                          ];
+                        })
+                      ].map(row => row.join(',')).join('\n');
+
+                      const blob = new Blob([csvContent], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `payroll_report_${new Date().toISOString().split('T')[0]}.csv`;
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                    }}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    Export
+                  </button>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Payroll Report</h3>
+                <p className="text-gray-600 text-sm mb-4">Detailed payroll breakdown for all employees</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Payroll:</span>
+                    <span className="font-medium">${payrollStats.totalPayroll.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Active Employees:</span>
+                    <span className="font-medium">{payrollStats.activeEmployees}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Average Salary:</span>
+                    <span className="font-medium">${Math.round(payrollStats.totalPayroll / payrollStats.totalEmployees).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Employee Report Card */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Users className="w-6 h-6 text-green-600" />
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const csvContent = [
+                        ['Name', 'Position', 'Department', 'Salary', 'Status', 'Email'],
+                        ...employees.map(emp => [
+                          emp.name,
+                          emp.position,
+                          emp.department,
+                          emp.salary,
+                          emp.status,
+                          emp.email
+                        ])
+                      ].map(row => row.join(',')).join('\n');
+
+                      const blob = new Blob([csvContent], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `employee_report_${new Date().toISOString().split('T')[0]}.csv`;
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                    }}
+                    className="text-green-600 hover:text-green-800 text-sm font-medium"
+                  >
+                    Export
+                  </button>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Employee Report</h3>
+                <p className="text-gray-600 text-sm mb-4">Complete employee information and statistics</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Employees:</span>
+                    <span className="font-medium">{payrollStats.totalEmployees}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Active:</span>
+                    <span className="font-medium text-green-600">{payrollStats.activeEmployees}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Inactive:</span>
+                    <span className="font-medium text-gray-600">{payrollStats.totalEmployees - payrollStats.activeEmployees}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tax Report Card */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <Calendar className="w-6 h-6 text-yellow-600" />
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const csvContent = [
+                        ['Tax Type', 'Rate', 'Amount', 'Description'],
+                        ['Federal Tax', '25%', `$${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}`, 'Federal income tax'],
+                        ['State Tax', '8%', `$${Math.round(payrollStats.totalPayroll * 0.08).toLocaleString()}`, 'State income tax'],
+                        ['Social Security', '6.2%', `$${Math.round(payrollStats.totalPayroll * 0.062).toLocaleString()}`, 'Social Security tax'],
+                        ['Medicare', '1.45%', `$${Math.round(payrollStats.totalPayroll * 0.0145).toLocaleString()}`, 'Medicare tax'],
+                        ['Unemployment', '6%', `$${Math.round(payrollStats.totalPayroll * 0.06).toLocaleString()}`, 'Unemployment insurance'],
+                      ].map(row => row.join(',')).join('\n');
+
+                      const blob = new Blob([csvContent], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `tax_report_${new Date().toISOString().split('T')[0]}.csv`;
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                    }}
+                    className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
+                  >
+                    Export
+                  </button>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Tax Report</h3>
+                <p className="text-gray-600 text-sm mb-4">Tax calculations and deductions summary</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Taxes:</span>
+                    <span className="font-medium">${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Federal Tax:</span>
+                    <span className="font-medium">${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">State Tax:</span>
+                    <span className="font-medium">${Math.round(payrollStats.totalPayroll * 0.08).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Detailed Reports Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Payroll History Chart */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-lg font-medium text-gray-900">Payroll History</h2>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {payrollHistory.map((payroll) => (
+                      <div key={payroll.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{payroll.period}</h3>
+                          <p className="text-sm text-gray-500">{payroll.date}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-gray-900">${payroll.amount.toLocaleString()}</p>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {payroll.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Department Breakdown */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-lg font-medium text-gray-900">Department Breakdown</h2>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {Array.from(new Set(employees.map(emp => emp.department))).map((dept) => {
+                      const deptEmployees = employees.filter(emp => emp.department === dept);
+                      const deptSalary = deptEmployees.reduce((sum, emp) => sum + emp.salary, 0);
+                      return (
+                        <div key={dept} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <h3 className="font-medium text-gray-900">{dept}</h3>
+                            <p className="text-sm text-gray-500">{deptEmployees.length} employees</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-gray-900">${deptSalary.toLocaleString()}</p>
+                            <p className="text-sm text-gray-500">Total Salary</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Analytics Summary */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-medium text-gray-900">Analytics Summary</h2>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{payrollStats.totalEmployees}</div>
+                    <div className="text-sm text-gray-600">Total Employees</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{payrollStats.activeEmployees}</div>
+                    <div className="text-sm text-gray-600">Active Employees</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600">${Math.round(payrollStats.totalPayroll / payrollStats.totalEmployees).toLocaleString()}</div>
+                    <div className="text-sm text-gray-600">Average Salary</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">${payrollStats.totalPayroll.toLocaleString()}</div>
+                    <div className="text-sm text-gray-600">Total Payroll</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
