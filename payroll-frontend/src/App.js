@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, createContext } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { 
   Users, 
   Clock, 
@@ -25,8 +26,77 @@ import {
   User
 } from 'lucide-react';
 import './App.css';
+import LoginPage from './LoginPage';
+import ProtectedRoute from './ProtectedRoute';
+
+// Authentication Context
+export const AuthContext = createContext();
 
 function App() {
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState('user');
+  const [userInfo, setUserInfo] = useState(null);
+
+  // Login function
+  const login = (userData, rememberMe = false) => {
+    setIsAuthenticated(true);
+    setUserRole(userData.role);
+    setUserInfo(userData);
+    
+    if (rememberMe) {
+      localStorage.setItem('userData', JSON.stringify(userData));
+    }
+  };
+
+  // Logout function
+  const logout = () => {
+    setIsAuthenticated(false);
+    setUserRole('user');
+    setUserInfo(null);
+    localStorage.removeItem('userData');
+  };
+
+  // Check for stored authentication on app load
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem('userData');
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      login(userData, true);
+    }
+  }, []);
+
+  const authContextValue = {
+    isAuthenticated,
+    userRole,
+    userInfo,
+    login,
+    logout
+  };
+
+  return (
+    <AuthContext.Provider value={authContextValue}>
+      <Router>
+        <Routes>
+          <Route path="/login" element={
+            isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+          } />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard/*" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Router>
+    </AuthContext.Provider>
+  );
+}
+
+// Dashboard Component
+const Dashboard = () => {
+  const { userRole, userInfo, logout } = React.useContext(AuthContext);
+  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -527,9 +597,8 @@ function App() {
 
   // Profile action handlers
   const handleLogout = () => {
-    setIsLoggedOut(true);
-    setIsSwitchingUser(false);
-    // Optionally clear more app state here
+    logout(); // Use the new authentication context logout
+    setShowProfileModal(false);
   };
 
   const handleSwitchUser = () => {
@@ -1696,8 +1765,29 @@ function App() {
               <div className="flex-shrink-0">
                 <h1 className="text-xl font-bold text-primary-600">Cloud Payroll</h1>
               </div>
+              <div className="ml-6 flex items-center space-x-4">
+                <span className="text-sm text-gray-500">Welcome,</span>
+                <span className="text-sm font-medium text-gray-900">{userInfo?.name || 'User'}</span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  userRole === 'admin' 
+                    ? 'bg-red-100 text-red-800' 
+                    : userRole === 'manager'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-green-100 text-green-800'
+                }`}>
+                  {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+                </span>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
+              {userRole === 'admin' && (
+                <button 
+                  onClick={() => setActiveTab('reports')}
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Admin Panel
+                </button>
+              )}
               <button 
                 onClick={handleOpenSettings}
                 className="p-2 text-gray-400 hover:text-gray-500"
@@ -1720,12 +1810,12 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-              { id: 'employees', label: 'Employees', icon: Users },
-              { id: 'timesheets', label: 'Timesheets', icon: Clock },
-              { id: 'payroll', label: 'Payroll', icon: DollarSign },
-              { id: 'reports', label: 'Reports', icon: Calendar },
-            ].map((tab) => (
+              { id: 'dashboard', label: 'Dashboard', icon: BarChart3, roles: ['admin', 'manager', 'user'] },
+              { id: 'employees', label: 'Employees', icon: Users, roles: ['admin', 'manager'] },
+              { id: 'timesheets', label: 'Timesheets', icon: Clock, roles: ['admin', 'manager', 'user'] },
+              { id: 'payroll', label: 'Payroll', icon: DollarSign, roles: ['admin', 'manager'] },
+              { id: 'reports', label: 'Reports', icon: Calendar, roles: ['admin', 'manager'] },
+            ].filter(tab => tab.roles.includes(userRole)).map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -1826,13 +1916,15 @@ function App() {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
-              <button 
-                onClick={handleAddEmployee}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Employee</span>
-              </button>
+              {(userRole === 'admin' || userRole === 'manager') && (
+                <button 
+                  onClick={handleAddEmployee}
+                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Employee</span>
+                </button>
+              )}
             </div>
 
             {/* Search and Filters */}
@@ -1934,20 +2026,26 @@ function App() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button 
-                            onClick={() => handleEditEmployee(employee)}
-                            className="text-blue-600 hover:text-blue-900" 
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteEmployee(employee)}
-                            className="text-red-600 hover:text-red-900" 
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {(userRole === 'admin' || userRole === 'manager') && (
+                            <>
+                              <button 
+                                onClick={() => handleEditEmployee(employee)}
+                                className="text-blue-600 hover:text-blue-900" 
+                                title="Edit"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              {userRole === 'admin' && (
+                                <button 
+                                  onClick={() => handleDeleteEmployee(employee)}
+                                  className="text-red-600 hover:text-red-900" 
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
