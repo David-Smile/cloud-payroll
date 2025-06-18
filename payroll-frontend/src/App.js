@@ -4,7 +4,6 @@ import {
   Clock, 
   DollarSign, 
   Calendar, 
-  Settings, 
   BarChart3, 
   Plus,
   Search,
@@ -13,7 +12,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  X
+  X,
+  Settings
 } from 'lucide-react';
 import './App.css';
 
@@ -42,6 +42,15 @@ function App() {
   const [showPayrollHistoryModal, setShowPayrollHistoryModal] = useState(false);
   const [showPayrollDetailsModal, setShowPayrollDetailsModal] = useState(false);
   const [selectedPayroll, setSelectedPayroll] = useState(null);
+  const [payrollHistory, setPayrollHistory] = useState([
+    { id: 1, period: 'Dec 2024', amount: 185000, status: 'processed', date: '2024-12-15' },
+    { id: 2, period: 'Nov 2024', amount: 182000, status: 'processed', date: '2024-11-15' },
+    { id: 3, period: 'Oct 2024', amount: 180000, status: 'processed', date: '2024-10-15' },
+  ]);
+
+  // Settings state
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   // Mock data for demonstration
   const payrollStats = {
@@ -51,11 +60,7 @@ function App() {
     pendingPayments: 3
   };
 
-  const recentPayrolls = [
-    { id: 1, period: 'Dec 2024', amount: 185000, status: 'processed', date: '2024-12-15' },
-    { id: 2, period: 'Nov 2024', amount: 182000, status: 'processed', date: '2024-11-15' },
-    { id: 3, period: 'Oct 2024', amount: 180000, status: 'processed', date: '2024-10-15' },
-  ];
+  const recentPayrolls = payrollHistory.slice(0, 3); // Get the 3 most recent payrolls
 
   // Filter employees based on search term and status filter
   const filteredEmployees = employees.filter(employee => {
@@ -156,16 +161,20 @@ function App() {
     // Simulate payroll processing
     setTimeout(() => {
       setProcessingPayroll(false);
-      setShowPayrollModal(true);
-      // Add new payroll to history
+      
+      // Create new payroll record
       const newPayroll = {
-        id: recentPayrolls.length + 1,
+        id: Math.max(...payrollHistory.map(p => p.id)) + 1,
         period: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
         amount: payrollStats.totalPayroll,
         status: 'processed',
         date: new Date().toISOString().split('T')[0]
       };
-      // In a real app, you would update the payroll history state here
+      
+      // Add new payroll to history
+      setPayrollHistory([newPayroll, ...payrollHistory]);
+      
+      // Show success message
       alert('Payroll processed successfully!');
     }, 2000);
   };
@@ -236,6 +245,20 @@ function App() {
     a.download = `payroll_${payroll.period.replace(' ', '_')}_${payroll.date}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  // Settings handler
+  const handleOpenSettings = () => {
+    setShowSettingsModal(true);
+  };
+
+  const handleToggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    if (!darkMode) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
   };
 
   const StatCard = ({ icon: Icon, title, value, change, color = 'blue' }) => (
@@ -1011,6 +1034,96 @@ function App() {
     );
   };
 
+  // Settings Modal
+  const SettingsModal = ({ isOpen, onClose }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Application Settings</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="space-y-6">
+            {/* Company Information */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Company Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div><span className="font-medium">Company Name:</span> Cloud Payroll Inc.</div>
+                <div><span className="font-medium">Version:</span> 1.0.0</div>
+                <div><span className="font-medium">Contact:</span> admin@cloudpayroll.com</div>
+                <div><span className="font-medium">Support:</span> support@cloudpayroll.com</div>
+              </div>
+            </div>
+
+            {/* Application Settings */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Application Settings</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">Dark Mode</span>
+                  <button 
+                    onClick={handleToggleDarkMode}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      darkMode ? 'bg-primary-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      darkMode ? 'translate-x-5' : 'translate-x-1'
+                    }`}></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* System Information */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">System Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div><span className="font-medium">Total Employees:</span> {payrollStats.totalEmployees}</div>
+                <div><span className="font-medium">Active Employees:</span> {payrollStats.activeEmployees}</div>
+                <div><span className="font-medium">Total Payroll:</span> ${payrollStats.totalPayroll.toLocaleString()}</div>
+                <div><span className="font-medium">Last Updated:</span> {new Date().toLocaleDateString()}</div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Actions</h3>
+              <div className="space-y-2">
+                <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded">
+                  Export Data
+                </button>
+                <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded">
+                  Backup Settings
+                </button>
+                <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded">
+                  View Logs
+                </button>
+                <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded">
+                  Reset to Defaults
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1023,7 +1136,10 @@ function App() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-400 hover:text-gray-500">
+              <button 
+                onClick={handleOpenSettings}
+                className="p-2 text-gray-400 hover:text-gray-500"
+              >
                 <Settings className="w-5 h-5" />
               </button>
               <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
@@ -1127,7 +1243,7 @@ function App() {
                       onClick={handleViewAllPayrollHistory}
                       className="text-primary-600 hover:text-primary-700 text-sm font-medium"
                     >
-                      View all
+                      View All
                     </button>
                   </div>
                 </div>
@@ -1248,22 +1364,22 @@ function App() {
                         <div className="flex items-center justify-end space-x-2">
                           <button 
                             onClick={() => handleViewEmployee(employee)}
-                            className="text-primary-600 hover:text-primary-900"
-                            title="View Employee"
+                            className="text-primary-600 hover:text-primary-900" 
+                            title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleEditEmployee(employee)}
-                            className="text-yellow-600 hover:text-yellow-900"
-                            title="Edit Employee"
+                            className="text-blue-600 hover:text-blue-900" 
+                            title="Edit"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleDeleteEmployee(employee)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Delete Employee"
+                            className="text-red-600 hover:text-red-900" 
+                            title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1273,11 +1389,6 @@ function App() {
                   ))}
                 </tbody>
               </table>
-              {filteredEmployees.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No employees found matching your criteria.</p>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -1298,9 +1409,22 @@ function App() {
                 <h1 className="text-2xl font-bold text-gray-900">Payroll Management</h1>
                 <p className="text-gray-600 mt-1">Process payroll, view payment history, and manage employee compensation</p>
               </div>
-              <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2">
-                <Plus className="w-4 h-4" />
-                <span>Process Payroll</span>
+              <button 
+                onClick={handleProcessPayroll}
+                disabled={processingPayroll}
+                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {processingPayroll ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>Process Payroll</span>
+                  </>
+                )}
               </button>
             </div>
 
@@ -1444,7 +1568,7 @@ function App() {
                   <button 
                     onClick={handleProcessPayroll}
                     disabled={processingPayroll}
-                    className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {processingPayroll ? (
                       <>
@@ -1487,149 +1611,39 @@ function App() {
                   </button>
                 </div>
               </div>
-              <div className="overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Payroll Period
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Employees
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Gross Pay
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Net Pay
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {recentPayrolls.map((payroll) => (
-                      <tr key={payroll.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{payroll.period}</div>
-                            <div className="text-sm text-gray-500">{payroll.date}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {payrollStats.activeEmployees}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${payroll.amount.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${Math.round(payroll.amount * 0.6).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {payroll.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center justify-end space-x-2">
-                            <button 
-                              onClick={() => handleViewPayrollDetails(payroll)}
-                              className="text-primary-600 hover:text-primary-900" 
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={() => handleDownloadPayroll(payroll)}
-                              className="text-green-600 hover:text-green-900" 
-                              title="Download"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Employee Payroll Breakdown */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Employee Payroll Breakdown</h2>
-              </div>
-              <div className="overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Employee
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Position
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Gross Pay
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Taxes
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Benefits
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Net Pay
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {employees.filter(emp => emp.status === 'active').map((employee) => {
-                      const grossPay = employee.salary / 12;
-                      const taxes = grossPay * 0.25;
-                      const benefits = grossPay * 0.15;
-                      const netPay = grossPay - taxes - benefits;
-                      
-                      return (
-                        <tr key={employee.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
-                                <span className="text-primary-600 font-medium text-sm">
-                                  {employee.name.split(' ').map(n => n[0]).join('')}
-                                </span>
-                              </div>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{employee.name}</div>
-                                <div className="text-sm text-gray-500">{employee.email}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {employee.position}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ${grossPay.toLocaleString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ${taxes.toLocaleString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ${benefits.toLocaleString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                            ${netPay.toLocaleString()}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="p-6">
+                <div className="space-y-4">
+                  {recentPayrolls.map((payroll) => (
+                    <div key={payroll.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <h3 className="font-medium text-gray-900">{payroll.period}</h3>
+                        <p className="text-sm text-gray-500">{payroll.date}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-gray-900">${payroll.amount.toLocaleString()}</p>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {payroll.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button 
+                          onClick={() => handleViewPayrollDetails(payroll)}
+                          className="text-primary-600 hover:text-primary-900" 
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDownloadPayroll(payroll)}
+                          className="text-green-600 hover:text-green-900" 
+                          title="Download"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -1708,7 +1722,7 @@ function App() {
       <PayrollHistoryModal
         isOpen={showPayrollHistoryModal}
         onClose={() => setShowPayrollHistoryModal(false)}
-        payrolls={recentPayrolls}
+        payrolls={payrollHistory}
         payrollStats={payrollStats}
       />
 
@@ -1717,6 +1731,11 @@ function App() {
         onClose={() => setShowPayrollDetailsModal(false)}
         payroll={selectedPayroll}
         employees={employees}
+      />
+
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
       />
     </div>
   );
