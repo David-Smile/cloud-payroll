@@ -29,23 +29,30 @@ const LoginPage = () => {
     setIsLoading(true);
     setError('');
 
-    // Simulate API call
-    setTimeout(() => {
-      // Demo credentials
-      if (email === 'admin@company.com' && password === 'admin123') {
-        login({ email, role: 'admin', name: 'Admin User' }, rememberMe);
-        navigate(from, { replace: true });
-      } else if (email === 'manager@company.com' && password === 'manager123') {
-        login({ email, role: 'manager', name: 'Manager User' }, rememberMe);
-        navigate(from, { replace: true });
-      } else if (email === 'user@company.com' && password === 'user123') {
-        login({ email, role: 'user', name: 'Regular User' }, rememberMe);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        // Store JWT in localStorage (or sessionStorage if not rememberMe)
+        if (rememberMe) {
+          localStorage.setItem('token', data.token);
+        } else {
+          sessionStorage.setItem('token', data.token);
+        }
+        // Store user info
+        login(data.user, rememberMe);
         navigate(from, { replace: true });
       } else {
-        setError('Invalid email or password');
+        setError(data.message || 'Invalid email or password');
       }
-      setIsLoading(false);
-    }, 1000);
+    } catch (err) {
+      setError('Network error. Please try again.');
+    }
+    setIsLoading(false);
   };
 
   return (

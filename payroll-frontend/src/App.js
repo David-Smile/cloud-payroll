@@ -5,7 +5,6 @@ import {
   Clock, 
   DollarSign, 
   Calendar, 
-  BarChart3, 
   Plus,
   Search,
   Filter,
@@ -18,9 +17,6 @@ import {
   Printer,
   CheckCircle,
   AlertCircle,
-  Play,
-  Pause,
-  StopCircle,
   CalendarDays,
   TrendingUp,
   User
@@ -28,6 +24,7 @@ import {
 import './App.css';
 import LoginPage from './LoginPage';
 import ProtectedRoute from './ProtectedRoute';
+import { apiFetch } from './api';
 
 // Authentication Context
 export const AuthContext = createContext();
@@ -43,9 +40,10 @@ function App() {
     setIsAuthenticated(true);
     setUserRole(userData.role);
     setUserInfo(userData);
-    
     if (rememberMe) {
       localStorage.setItem('userData', JSON.stringify(userData));
+    } else {
+      sessionStorage.setItem('userData', JSON.stringify(userData));
     }
   };
 
@@ -55,14 +53,17 @@ function App() {
     setUserRole('user');
     setUserInfo(null);
     localStorage.removeItem('userData');
+    sessionStorage.removeItem('userData');
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
   };
 
   // Check for stored authentication on app load
   React.useEffect(() => {
-    const storedUser = localStorage.getItem('userData');
+    const storedUser = localStorage.getItem('userData') || sessionStorage.getItem('userData');
     if (storedUser) {
       const userData = JSON.parse(storedUser);
-      login(userData, true);
+      login(userData, !!localStorage.getItem('userData'));
     }
   }, []);
 
@@ -106,14 +107,7 @@ const Dashboard = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [employees, setEmployees] = useState([
-    { id: 1, name: 'John Smith', position: 'Software Engineer', salary: 85000, status: 'active', email: 'john.smith@company.com', department: 'Engineering' },
-    { id: 2, name: 'Sarah Johnson', position: 'Product Manager', salary: 95000, status: 'active', email: 'sarah.johnson@company.com', department: 'Product' },
-    { id: 3, name: 'Mike Davis', position: 'UX Designer', salary: 75000, status: 'active', email: 'mike.davis@company.com', department: 'Design' },
-    { id: 4, name: 'Emily Wilson', position: 'Marketing Specialist', salary: 65000, status: 'inactive', email: 'emily.wilson@company.com', department: 'Marketing' },
-    { id: 5, name: 'David Brown', position: 'Data Analyst', salary: 70000, status: 'active', email: 'david.brown@company.com', department: 'Analytics' },
-    { id: 6, name: 'Lisa Garcia', position: 'HR Manager', salary: 80000, status: 'active', email: 'lisa.garcia@company.com', department: 'Human Resources' },
-  ]);
+  const [employees, setEmployees] = useState([]);
   const [payrollPeriod, setPayrollPeriod] = useState('biweekly');
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [showPayrollPreview, setShowPayrollPreview] = useState(false);
@@ -121,87 +115,16 @@ const Dashboard = () => {
   const [showPayrollHistoryModal, setShowPayrollHistoryModal] = useState(false);
   const [showPayrollDetailsModal, setShowPayrollDetailsModal] = useState(false);
   const [selectedPayroll, setSelectedPayroll] = useState(null);
-  const [payrollHistory, setPayrollHistory] = useState([
-    { id: 1, period: 'Dec 2024', amount: 185000, status: 'processed', date: '2024-12-15' },
-    { id: 2, period: 'Nov 2024', amount: 182000, status: 'processed', date: '2024-11-15' },
-    { id: 3, period: 'Oct 2024', amount: 180000, status: 'processed', date: '2024-10-15' },
-  ]);
+  const [payrollHistory, setPayrollHistory] = useState([]);
 
   // Timesheet state
-  const [timesheets, setTimesheets] = useState([
-    { 
-      id: 1, 
-      employeeId: 1, 
-      employeeName: 'John Smith', 
-      date: '2024-12-15', 
-      startTime: '09:00', 
-      endTime: '17:00', 
-      breakTime: 60, 
-      totalHours: 7, 
-      status: 'approved', 
-      project: 'Website Redesign',
-      notes: 'Completed frontend components'
-    },
-    { 
-      id: 2, 
-      employeeId: 2, 
-      employeeName: 'Sarah Johnson', 
-      date: '2024-12-15', 
-      startTime: '08:30', 
-      endTime: '17:30', 
-      breakTime: 60, 
-      totalHours: 8, 
-      status: 'pending', 
-      project: 'Product Launch',
-      notes: 'Finalized product requirements'
-    },
-    { 
-      id: 3, 
-      employeeId: 3, 
-      employeeName: 'Mike Davis', 
-      date: '2024-12-15', 
-      startTime: '09:00', 
-      endTime: '18:00', 
-      breakTime: 45, 
-      totalHours: 8.25, 
-      status: 'approved', 
-      project: 'UI/UX Design',
-      notes: 'Created user interface mockups'
-    },
-    { 
-      id: 4, 
-      employeeId: 5, 
-      employeeName: 'David Brown', 
-      date: '2024-12-15', 
-      startTime: '08:00', 
-      endTime: '16:00', 
-      breakTime: 30, 
-      totalHours: 7.5, 
-      status: 'pending', 
-      project: 'Data Analysis',
-      notes: 'Analyzed customer behavior data'
-    },
-    { 
-      id: 5, 
-      employeeId: 6, 
-      employeeName: 'Lisa Garcia', 
-      date: '2024-12-15', 
-      startTime: '09:00', 
-      endTime: '17:00', 
-      breakTime: 60, 
-      totalHours: 7, 
-      status: 'approved', 
-      project: 'HR Management',
-      notes: 'Conducted employee reviews'
-    }
-  ]);
+  const [timesheets, setTimesheets] = useState([]);
 
   const [showTimesheetModal, setShowTimesheetModal] = useState(false);
   const [showTimesheetDetailsModal, setShowTimesheetDetailsModal] = useState(false);
   const [selectedTimesheet, setSelectedTimesheet] = useState(null);
   const [timesheetFilter, setTimesheetFilter] = useState('all');
   const [timesheetSearchTerm, setTimesheetSearchTerm] = useState('');
-  const [currentWeek, setCurrentWeek] = useState(new Date());
 
   // Settings state
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -219,24 +142,6 @@ const Dashboard = () => {
     department: "Finance Department",
     bio: "Experienced payroll manager with a passion for accuracy and efficiency. Loves hiking and coffee."
   });
-  const [userProfile, setUserProfile] = useState({
-    name: 'Admin User',
-    email: 'admin@company.com',
-    role: 'System Administrator',
-    department: 'IT',
-    phone: '+1 (555) 123-4567',
-    location: 'San Francisco, CA',
-    joinDate: '2023-01-15',
-    avatar: 'AU',
-    bio: 'System administrator with 5+ years of experience in payroll and HR systems management.',
-    preferences: {
-      notifications: true,
-      emailUpdates: true,
-      twoFactorAuth: false
-    }
-  });
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editedProfile, setEditedProfile] = useState({});
 
   // Mock data for demonstration
   const payrollStats = {
@@ -250,9 +155,9 @@ const Dashboard = () => {
 
   // Filter employees based on search term and status filter
   const filteredEmployees = employees.filter(employee => {
-    const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (employee.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (employee.position || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (employee.email || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -310,10 +215,22 @@ const Dashboard = () => {
   };
 
   // Confirm delete
-  const confirmDelete = () => {
-    setEmployees(employees.filter(emp => emp.id !== selectedEmployee.id));
-    setShowDeleteModal(false);
-    setSelectedEmployee(null);
+  const confirmDelete = async () => {
+    try {
+      const { response, data } = await apiFetch(`/employees/${selectedEmployee._id}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok && data.success) {
+        setEmployees(employees.filter(emp => emp._id !== selectedEmployee._id));
+        setShowDeleteModal(false);
+        setSelectedEmployee(null);
+      } else {
+        alert(data.message || 'Failed to delete employee');
+      }
+    } catch (error) {
+      alert('Error deleting employee');
+    }
   };
 
   // Handle add employee
@@ -322,47 +239,72 @@ const Dashboard = () => {
   };
 
   // Add new employee
-  const addNewEmployee = (newEmployee) => {
-    const employee = {
-      ...newEmployee,
-      id: Math.max(...employees.map(emp => emp.id)) + 1,
-      salary: parseInt(newEmployee.salary)
-    };
-    setEmployees([...employees, employee]);
-    setShowAddModal(false);
+  const addNewEmployee = async (newEmployee) => {
+    try {
+      const { response, data } = await apiFetch('/employees', {
+        method: 'POST',
+        body: JSON.stringify(newEmployee)
+      });
+      
+      if (response.ok && data.success) {
+        setEmployees([...employees, data.employee]);
+        setShowAddModal(false);
+      } else {
+        alert(data.message || 'Failed to add employee');
+      }
+    } catch (error) {
+      alert('Error adding employee');
+    }
   };
 
   // Update employee
-  const updateEmployee = (updatedEmployee) => {
-    setEmployees(employees.map(emp => 
-      emp.id === selectedEmployee.id ? { ...updatedEmployee, id: emp.id, salary: parseInt(updatedEmployee.salary) } : emp
-    ));
-    setShowEditModal(false);
-    setSelectedEmployee(null);
+  const updateEmployee = async (updatedEmployee) => {
+    try {
+      const { response, data } = await apiFetch(`/employees/${selectedEmployee._id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updatedEmployee)
+      });
+      
+      if (response.ok && data.success) {
+        setEmployees(employees.map(emp => 
+          emp._id === selectedEmployee._id ? data.employee : emp
+        ));
+        setShowEditModal(false);
+        setSelectedEmployee(null);
+      } else {
+        alert(data.message || 'Failed to update employee');
+      }
+    } catch (error) {
+      alert('Error updating employee');
+    }
   };
 
   // Payroll handlers
-  const handleProcessPayroll = () => {
+  const handleProcessPayroll = async () => {
     setProcessingPayroll(true);
-    // Simulate payroll processing
-    setTimeout(() => {
+    try {
+      const { response, data } = await apiFetch('/payroll', {
+        method: 'POST',
+        body: JSON.stringify({
+          period: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+          type: payrollPeriod,
+          notes: 'Payroll processed via frontend'
+        })
+      });
+      
+      if (response.ok && data.success) {
+        setPayrollHistory([data.payroll, ...payrollHistory]);
+        alert('Payroll processed successfully!');
+      } else {
+        alert(data.message || 'Failed to process payroll');
+      }
+    } catch (error) {
+      alert('Error processing payroll');
+    } finally {
       setProcessingPayroll(false);
-      
-      // Create new payroll record
-      const newPayroll = {
-        id: Math.max(...payrollHistory.map(p => p.id)) + 1,
-        period: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        amount: payrollStats.totalPayroll,
-        status: 'processed',
-        date: new Date().toISOString().split('T')[0]
-      };
-      
-      // Add new payroll to history
-      setPayrollHistory([newPayroll, ...payrollHistory]);
-      
-      // Show success message
-      alert('Payroll processed successfully!');
-    }, 2000);
+    }
   };
 
   const handlePreviewPayroll = () => {
@@ -521,15 +463,15 @@ const Dashboard = () => {
 
   const handleDownloadPayroll = (payroll) => {
     const csvContent = [
-      ['Period', 'Amount', 'Status', 'Date'],
-      [payroll.period, payroll.amount, payroll.status, payroll.date]
+      ['Period', 'Net Amount', 'Status', 'Date'],
+      [payroll.period, payroll.netAmount || 0, payroll.status, new Date(payroll.createdAt).toLocaleDateString()]
     ].map(row => row.join(',')).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `payroll_${payroll.period.replace(' ', '_')}_${payroll.date}.csv`;
+    a.download = `payroll_${payroll.period.replace(' ', '_')}_${new Date(payroll.createdAt).toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -551,51 +493,8 @@ const Dashboard = () => {
   // Profile handlers
   const handleOpenProfile = () => {
     setShowProfileModal(true);
-    setIsEditingProfile(false);
-    setEditedProfile({});
   };
 
-  const handleEditProfile = () => {
-    setIsEditingProfile(true);
-    setEditedProfile({ ...userProfile });
-  };
-
-  const handleSaveProfile = () => {
-    setUserProfile({ ...userProfile, ...editedProfile });
-    setIsEditingProfile(false);
-    setEditedProfile({});
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditingProfile(false);
-    setEditedProfile({});
-  };
-
-  const handleProfileChange = (field, value) => {
-    setEditedProfile({ ...editedProfile, [field]: value });
-  };
-
-  const handlePreferenceChange = (preference, value) => {
-    if (isEditingProfile) {
-      setEditedProfile(prev => ({
-        ...prev,
-        preferences: {
-          ...prev.preferences,
-          [preference]: value
-        }
-      }));
-    } else {
-      setUserProfile(prev => ({
-        ...prev,
-        preferences: {
-          ...prev.preferences,
-          [preference]: value
-        }
-      }));
-    }
-  };
-
-  // Profile action handlers
   const handleLogout = () => {
     logout(); // Use the new authentication context logout
     setShowProfileModal(false);
@@ -612,7 +511,7 @@ const Dashboard = () => {
       setCurrentUser({
         name: switchUsername,
         role: "Payroll Manager",
-        email: `${switchUsername.toLowerCase().replace(/ /g, ".")}@company.com`,
+        email: `${(switchUsername || '').toLowerCase().replace(/ /g, ".")}@company.com`,
         department: "Finance Department",
         bio: "Welcome, new user! Update your profile soon."
       });
@@ -652,22 +551,22 @@ const Dashboard = () => {
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
             <span className="text-primary-600 font-semibold">
-              {employee.name.split(' ').map(n => n[0]).join('')}
+              {(employee.name || '').split(' ').map(n => n[0]).join('')}
             </span>
           </div>
           <div>
-            <h3 className="font-medium text-gray-900">{employee.name}</h3>
-            <p className="text-sm text-gray-500">{employee.position}</p>
+            <h3 className="font-medium text-gray-900">{employee.name || 'Unknown Employee'}</h3>
+            <p className="text-sm text-gray-500">{employee.position || 'No Position'}</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="font-medium text-gray-900">${employee.salary.toLocaleString()}</p>
+          <p className="font-medium text-gray-900">${(employee.salary || 0).toLocaleString()}</p>
           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
             employee.status === 'active' 
               ? 'bg-green-100 text-green-800' 
               : 'bg-gray-100 text-gray-800'
           }`}>
-            {employee.status}
+            {(employee.status || '').charAt(0).toUpperCase() + (employee.status || '').slice(1)}
           </span>
         </div>
       </div>
@@ -679,11 +578,15 @@ const Dashboard = () => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-medium text-gray-900">{payroll.period}</h3>
-          <p className="text-sm text-gray-500">{payroll.date}</p>
+          <p className="text-sm text-gray-500">{new Date(payroll.createdAt).toLocaleDateString()}</p>
         </div>
         <div className="text-right">
-          <p className="font-medium text-gray-900">${payroll.amount.toLocaleString()}</p>
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <p className="font-medium text-gray-900">${(payroll.netAmount || 0).toLocaleString()}</p>
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+            payroll.status === 'processed' ? 'bg-green-100 text-green-800' :
+            payroll.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+            'bg-gray-100 text-gray-800'
+          }`}>
             {payroll.status}
           </span>
         </div>
@@ -914,18 +817,18 @@ const Dashboard = () => {
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
                 <span className="text-primary-600 font-bold text-xl">
-                  {employee.name.split(' ').map(n => n[0]).join('')}
+                  {(employee.name || '').split(' ').map(n => n[0]).join('')}
                 </span>
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-gray-900">{employee.name}</h3>
-                <p className="text-lg text-gray-600">{employee.position}</p>
+                <h3 className="text-2xl font-bold text-gray-900">{employee.name || 'Unknown Employee'}</h3>
+                <p className="text-lg text-gray-600">{employee.position || 'No Position'}</p>
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mt-2 ${
                   employee.status === 'active' 
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {employee.status.charAt(0).toUpperCase() + employee.status.slice(1)}
+                  {(employee.status || '').charAt(0).toUpperCase() + (employee.status || '').slice(1)}
                 </span>
               </div>
             </div>
@@ -937,13 +840,14 @@ const Dashboard = () => {
                   <label className="block text-sm font-medium text-gray-500 uppercase tracking-wide">
                     Email Address
                   </label>
-                  <p className="mt-1 text-lg text-gray-900">{employee.email}</p>
+                  <p className="mt-1 text-lg text-gray-900">{employee.email || 'No Email'}</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-500 uppercase tracking-wide">
                     Department
                   </label>
+                  <p className="mt-1 text-lg text-gray-900">{employee.department || 'No Department'}</p>
                   <p className="mt-1 text-lg text-gray-900">{employee.department}</p>
                 </div>
               </div>
@@ -962,7 +866,7 @@ const Dashboard = () => {
                   <label className="block text-sm font-medium text-gray-500 uppercase tracking-wide">
                     Employee ID
                   </label>
-                  <p className="mt-1 text-lg text-gray-900">#{employee.id.toString().padStart(4, '0')}</p>
+                  <p className="mt-1 text-lg text-gray-900">#{employee._id.toString().padStart(4, '0')}</p>
                 </div>
               </div>
             </div>
@@ -1069,7 +973,7 @@ const Dashboard = () => {
                   const benefits = grossPay * 0.15;
                   const netPay = grossPay - taxes - benefits;
                   return (
-                    <tr key={emp.id}>
+                    <tr key={emp._id}>
                       <td className="px-4 py-2 whitespace-nowrap">{emp.name}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{emp.position}</td>
                       <td className="px-4 py-2 whitespace-nowrap">${grossPay.toLocaleString()}</td>
@@ -1187,7 +1091,7 @@ const Dashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {payrolls.map((payroll) => (
-                  <tr key={payroll.id} className="hover:bg-gray-50">
+                  <tr key={payroll._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {payroll.period}
                     </td>
@@ -1198,10 +1102,10 @@ const Dashboard = () => {
                       {payrollStats.activeEmployees}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${payroll.amount.toLocaleString()}
+                      ${(payroll.totalAmount || 0).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${Math.round(payroll.amount * 0.6).toLocaleString()}
+                      ${(payroll.netAmount || 0).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -1251,7 +1155,6 @@ const Dashboard = () => {
     const totalGrossPay = activeEmployees.reduce((sum, emp) => sum + (emp.salary / 12), 0);
     const totalTaxes = totalGrossPay * 0.25;
     const totalBenefits = totalGrossPay * 0.15;
-    const totalNetPay = totalGrossPay - totalTaxes - totalBenefits;
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1287,19 +1190,19 @@ const Dashboard = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Gross Pay:</span>
-                  <span className="font-medium">${payroll.amount.toLocaleString()}</span>
+                  <span className="font-medium">${(payroll.totalAmount || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Taxes:</span>
-                  <span className="font-medium">${Math.round(payroll.amount * 0.25).toLocaleString()}</span>
+                  <span className="font-medium">${(payroll.taxes || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Benefits:</span>
-                  <span className="font-medium">${Math.round(payroll.amount * 0.15).toLocaleString()}</span>
+                  <span className="font-medium">${(payroll.deductions || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-medium border-t pt-2">
                   <span>Net Pay:</span>
-                  <span className="text-green-600">${Math.round(payroll.amount * 0.6).toLocaleString()}</span>
+                  <span className="text-green-600">${(payroll.netAmount || 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -1351,12 +1254,12 @@ const Dashboard = () => {
                   const netPay = grossPay - taxes - benefits;
                   
                   return (
-                    <tr key={employee.id} className="hover:bg-gray-50">
+                    <tr key={employee._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
                             <span className="text-primary-600 font-medium text-sm">
-                              {employee.name.split(' ').map(n => n[0]).join('')}
+                              {(employee.name || '').split(' ').map(n => n[0]).join('')}
                             </span>
                           </div>
                           <div>
@@ -1506,20 +1409,60 @@ const Dashboard = () => {
     setShowTimesheetDetailsModal(true);
   };
 
-  const handleDeleteTimesheet = (timesheet) => {
-    setTimesheets(timesheets.filter(ts => ts.id !== timesheet.id));
+  const handleDeleteTimesheet = async (timesheet) => {
+    try {
+      const { response, data } = await apiFetch(`/timesheets/${timesheet._id}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok && data.success) {
+        setTimesheets(timesheets.filter(ts => ts._id !== timesheet._id));
+      } else {
+        alert(data.message || 'Failed to delete timesheet');
+      }
+    } catch (error) {
+      alert('Error deleting timesheet');
+    }
   };
 
-  const handleApproveTimesheet = (timesheet) => {
-    setTimesheets(timesheets.map(ts => 
-      ts.id === timesheet.id ? { ...ts, status: 'approved' } : ts
-    ));
+  const handleApproveTimesheet = async (timesheet) => {
+    try {
+      const { response, data } = await apiFetch(`/timesheets/${timesheet._id}/approve`, {
+        method: 'POST'
+      });
+      
+      if (response.ok && data.success) {
+        setTimesheets(timesheets.map(ts => 
+          ts._id === timesheet._id ? data.timesheet : ts
+        ));
+      } else {
+        alert(data.message || 'Failed to approve timesheet');
+      }
+    } catch (error) {
+      alert('Error approving timesheet');
+    }
   };
 
-  const handleRejectTimesheet = (timesheet) => {
-    setTimesheets(timesheets.map(ts => 
-      ts.id === timesheet.id ? { ...ts, status: 'rejected' } : ts
-    ));
+  const handleRejectTimesheet = async (timesheet) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+    
+    try {
+      const { response, data } = await apiFetch(`/timesheets/${timesheet._id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ rejectionReason: reason })
+      });
+      
+      if (response.ok && data.success) {
+        setTimesheets(timesheets.map(ts => 
+          ts._id === timesheet._id ? data.timesheet : ts
+        ));
+      } else {
+        alert(data.message || 'Failed to reject timesheet');
+      }
+    } catch (error) {
+      alert('Error rejecting timesheet');
+    }
   };
 
   const handleTimesheetSearch = (e) => {
@@ -1648,10 +1591,15 @@ const Dashboard = () => {
     }, 500);
   };
 
+  // Utility function to safely get employee name from timesheet
+  const getTimesheetEmployeeName = (timesheet) => {
+    return timesheet.employee?.name || timesheet.employeeName || 'Unknown Employee';
+  };
+
   // Filter timesheets
   const filteredTimesheets = timesheets.filter(timesheet => {
-    const matchesSearch = timesheet.employeeName.toLowerCase().includes(timesheetSearchTerm.toLowerCase()) ||
-                         timesheet.project.toLowerCase().includes(timesheetSearchTerm.toLowerCase());
+    const matchesSearch = (timesheet.employee?.name || '').toLowerCase().includes(timesheetSearchTerm.toLowerCase()) ||
+                         (timesheet.project || '').toLowerCase().includes(timesheetSearchTerm.toLowerCase());
     const matchesFilter = timesheetFilter === 'all' || timesheet.status === timesheetFilter;
     return matchesSearch && matchesFilter;
   });
@@ -1755,6 +1703,119 @@ const Dashboard = () => {
     );
   };
 
+  // Fetch employees from backend on mount
+  React.useEffect(() => {
+    async function fetchEmployees() {
+      try {
+        const { response, data } = await apiFetch('/employees');
+        if (response.ok && data.success) {
+          setEmployees(data.employees || []);
+        } else {
+          setEmployees([]);
+        }
+      } catch (err) {
+        setEmployees([]);
+      }
+    }
+    fetchEmployees();
+  }, []);
+
+  // Fetch payroll history from backend on mount
+  React.useEffect(() => {
+    async function fetchPayrolls() {
+      try {
+        const { response, data } = await apiFetch('/payroll');
+        if (response.ok && data.success) {
+          setPayrollHistory(data.payrolls || []);
+        } else {
+          setPayrollHistory([]);
+        }
+      } catch (err) {
+        setPayrollHistory([]);
+      }
+    }
+    fetchPayrolls();
+  }, []);
+
+  // Fetch timesheets from backend on mount
+  React.useEffect(() => {
+    async function fetchTimesheets() {
+      try {
+        const { response, data } = await apiFetch('/timesheets');
+        if (response.ok && data.success) {
+          setTimesheets(data.timesheets || []);
+        } else {
+          setTimesheets([]);
+        }
+      } catch (err) {
+        setTimesheets([]);
+      }
+    }
+    fetchTimesheets();
+  }, []);
+
+  // Add new timesheet
+  const addNewTimesheet = async (newTimesheet) => {
+    try {
+      const { response, data } = await apiFetch('/timesheets', {
+        method: 'POST',
+        body: JSON.stringify({
+          employee: newTimesheet.employeeId,
+          date: newTimesheet.date,
+          startTime: newTimesheet.startTime,
+          endTime: newTimesheet.endTime,
+          breakTime: newTimesheet.breakTime,
+          project: newTimesheet.project,
+          task: '',
+          notes: newTimesheet.notes,
+          location: '',
+          tags: []
+        })
+      });
+      
+      if (response.ok && data.success) {
+        setTimesheets([...timesheets, data.timesheet]);
+        setShowTimesheetModal(false);
+      } else {
+        alert(data.message || 'Failed to add timesheet');
+      }
+    } catch (error) {
+      alert('Error adding timesheet');
+    }
+  };
+
+  // Update timesheet
+  const updateTimesheet = async (updatedTimesheet) => {
+    try {
+      const { response, data } = await apiFetch(`/timesheets/${selectedTimesheet._id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          date: updatedTimesheet.date,
+          startTime: updatedTimesheet.startTime,
+          endTime: updatedTimesheet.endTime,
+          breakTime: updatedTimesheet.breakTime,
+          project: updatedTimesheet.project,
+          task: '',
+          notes: updatedTimesheet.notes,
+          location: '',
+          tags: []
+        })
+      });
+      
+      if (response.ok && data.success) {
+        setTimesheets(timesheets.map(ts => 
+          ts._id === selectedTimesheet._id ? data.timesheet : ts
+        ));
+        setShowTimesheetModal(false);
+        setSelectedTimesheet(null);
+      } else {
+        alert(data.message || 'Failed to update timesheet');
+      }
+    } catch (error) {
+      alert('Error updating timesheet');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1810,7 +1871,7 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: BarChart3, roles: ['admin', 'manager', 'user'] },
+              { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager', 'user'] },
               { id: 'employees', label: 'Employees', icon: Users, roles: ['admin', 'manager'] },
               { id: 'timesheets', label: 'Timesheets', icon: Clock, roles: ['admin', 'manager', 'user'] },
               { id: 'payroll', label: 'Payroll', icon: DollarSign, roles: ['admin', 'manager'] },
@@ -1884,7 +1945,7 @@ const Dashboard = () => {
                 </div>
                 <div className="p-6 space-y-4">
                   {employees.slice(0, 3).map((employee) => (
-                    <EmployeeCard key={employee.id} employee={employee} />
+                    <EmployeeCard key={employee._id} employee={employee} />
                   ))}
                 </div>
               </div>
@@ -1904,7 +1965,7 @@ const Dashboard = () => {
                 </div>
                 <div className="p-6 space-y-4">
                   {recentPayrolls.map((payroll) => (
-                    <PayrollCard key={payroll.id} payroll={payroll} />
+                    <PayrollCard key={payroll._id} payroll={payroll} />
                   ))}
                 </div>
               </div>
@@ -1988,12 +2049,12 @@ const Dashboard = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredEmployees.map((employee) => (
-                    <tr key={employee.id} className="hover:bg-gray-50">
+                    <tr key={employee._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
                             <span className="text-primary-600 font-medium text-sm">
-                              {employee.name.split(' ').map(n => n[0]).join('')}
+                              {(employee.name || '').split(' ').map(n => n[0]).join('')}
                             </span>
                           </div>
                           <div>
@@ -2014,7 +2075,7 @@ const Dashboard = () => {
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {employee.status}
+                          {(employee.status || '').charAt(0).toUpperCase() + (employee.status || '').slice(1)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -2234,9 +2295,9 @@ const Dashboard = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredTimesheets.map((timesheet) => (
-                      <tr key={timesheet.id} className="hover:bg-gray-50">
+                      <tr key={timesheet._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{timesheet.employeeName}</div>
+                          <div className="text-sm font-medium text-gray-900">{timesheet.employee?.name || 'Unknown Employee'}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{timesheet.date}</div>
@@ -2266,7 +2327,7 @@ const Dashboard = () => {
                             {timesheet.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
                             {timesheet.status === 'pending' && <AlertCircle className="w-3 h-3 mr-1" />}
                             {timesheet.status === 'rejected' && <X className="w-3 h-3 mr-1" />}
-                            {timesheet.status.charAt(0).toUpperCase() + timesheet.status.slice(1)}
+                            {(timesheet.status || '').charAt(0).toUpperCase() + (timesheet.status || '').slice(1)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -2504,14 +2565,18 @@ const Dashboard = () => {
               <div className="p-6">
                 <div className="space-y-4">
                   {recentPayrolls.map((payroll) => (
-                    <div key={payroll.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div key={payroll._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div>
                         <h3 className="font-medium text-gray-900">{payroll.period}</h3>
-                        <p className="text-sm text-gray-500">{payroll.date}</p>
+                        <p className="text-sm text-gray-500">{new Date(payroll.createdAt).toLocaleDateString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-gray-900">${payroll.amount.toLocaleString()}</p>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <p className="font-medium text-gray-900">${(payroll.netAmount || 0).toLocaleString()}</p>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          payroll.status === 'processed' ? 'bg-green-100 text-green-800' :
+                          payroll.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
                           {payroll.status}
                         </span>
                       </div>
@@ -2741,14 +2806,18 @@ const Dashboard = () => {
                 <div className="p-6">
                   <div className="space-y-4">
                     {payrollHistory.map((payroll) => (
-                      <div key={payroll.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={payroll._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
                           <h3 className="font-medium text-gray-900">{payroll.period}</h3>
-                          <p className="text-sm text-gray-500">{payroll.date}</p>
+                          <p className="text-sm text-gray-500">{new Date(payroll.createdAt).toLocaleDateString()}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium text-gray-900">${payroll.amount.toLocaleString()}</p>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <p className="font-medium text-gray-900">${(payroll.netAmount || 0).toLocaleString()}</p>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            payroll.status === 'processed' ? 'bg-green-100 text-green-800' :
+                            payroll.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
                             {payroll.status}
                           </span>
                         </div>
@@ -2908,20 +2977,11 @@ const Dashboard = () => {
         onSubmit={(timesheetData) => {
           if (selectedTimesheet) {
             // Update existing timesheet
-            setTimesheets(timesheets.map(ts => 
-              ts.id === selectedTimesheet.id ? { ...timesheetData, id: ts.id } : ts
-            ));
+            updateTimesheet(timesheetData);
           } else {
             // Add new timesheet
-            const newTimesheet = {
-              ...timesheetData,
-              id: Math.max(...timesheets.map(ts => ts.id)) + 1,
-              status: 'pending'
-            };
-            setTimesheets([...timesheets, newTimesheet]);
+            addNewTimesheet(timesheetData);
           }
-          setShowTimesheetModal(false);
-          setSelectedTimesheet(null);
         }}
         mode={selectedTimesheet ? 'edit' : 'add'}
       />
@@ -3144,11 +3204,11 @@ const TimesheetDetailsModal = ({ isOpen, onClose, timesheet }) => {
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
               <span className="text-primary-600 font-bold">
-                {timesheet.employeeName.split(' ').map(n => n[0]).join('')}
+                {(timesheet.employeeName || '').split(' ').map(n => n[0]).join('')}
               </span>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{timesheet.employeeName}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{timesheet.employeeName || 'Unknown Employee'}</h3>
               <p className="text-sm text-gray-600">Employee ID: #{timesheet.employeeId}</p>
             </div>
           </div>
@@ -3181,10 +3241,7 @@ const TimesheetDetailsModal = ({ isOpen, onClose, timesheet }) => {
                     ? 'bg-yellow-100 text-yellow-800'
                     : 'bg-red-100 text-red-800'
                 }`}>
-                  {timesheet.status === 'approved' && <CheckCircle className="w-4 h-4 mr-1" />}
-                  {timesheet.status === 'pending' && <AlertCircle className="w-4 h-4 mr-1" />}
-                  {timesheet.status === 'rejected' && <X className="w-4 h-4 mr-1" />}
-                  {timesheet.status.charAt(0).toUpperCase() + timesheet.status.slice(1)}
+                  {(timesheet.status || '').charAt(0).toUpperCase() + (timesheet.status || '').slice(1)}
                 </span>
               </div>
             </div>
