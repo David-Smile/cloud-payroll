@@ -140,6 +140,5 @@ payrollSchema.index({ period: 1 });
 payrollSchema.index({ status: 1 });
 payrollSchema.index({ processedBy: 1 });
 payrollSchema.index({ startDate: 1, endDate: 1 });
-payrollSchema.index({ reference: 1 });
 
 module.exports = mongoose.model('Payroll', payrollSchema); 
