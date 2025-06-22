@@ -28,6 +28,25 @@ const initializeDatabase = async () => {
       console.log('ℹ️  Admin user already exists');
     }
 
+    // Check if manager user already exists
+    const managerExists = await User.findOne({ email: 'manager@company.com' });
+    
+    if (!managerExists) {
+      // Create default manager user
+      const managerUser = await User.create({
+        name: 'Manager User',
+        email: 'manager@company.com',
+        password: 'manager123',
+        role: 'manager',
+        department: 'Management',
+        bio: 'Department manager with access to team management features.'
+      });
+
+      console.log('✅ Default manager user created:', managerUser.email);
+    } else {
+      console.log('ℹ️  Manager user already exists');
+    }
+
     // Create sample employees if none exist
     const employeeCount = await Employee.countDocuments();
     

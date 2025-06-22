@@ -193,7 +193,7 @@ const LoginPage = () => {
             <div className="mt-4 space-y-2 text-xs text-gray-600">
               <div className="bg-gray-50 p-3 rounded-md">
                 <p className="font-medium text-gray-700 mb-1">Admin Access:</p>
-                <p>Email: admin@company.com | Password: admin123</p>
+                <p>Email: admin@company.com | Password: ChangeThisToAStrongPassword123!</p>
               </div>
               <div className="bg-gray-50 p-3 rounded-md">
                 <p className="font-medium text-gray-700 mb-1">Manager Access:</p>
