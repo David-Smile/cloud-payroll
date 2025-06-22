@@ -19,7 +19,8 @@ import {
   AlertCircle,
   CalendarDays,
   TrendingUp,
-  User
+  User,
+  FileText
 } from 'lucide-react';
 import './App.css';
 import LoginPage from './LoginPage';
@@ -527,40 +528,40 @@ const Dashboard = () => {
   };
 
   const StatCard = ({ icon: Icon, title, value, change, color = 'blue' }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 stat-card">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{title}</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate stat-value">{value}</p>
           {change && (
-            <p className={`text-sm ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <p className={`text-xs sm:text-sm ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
               {change > 0 ? '+' : ''}{change}% from last month
             </p>
           )}
         </div>
-        <div className={`p-3 rounded-full bg-${color}-100`}>
-          <Icon className={`w-6 h-6 text-${color}-600`} />
+        <div className={`p-2 sm:p-3 rounded-full bg-${color}-100 flex-shrink-0 ml-3`}>
+          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 text-${color}-600`} />
         </div>
       </div>
     </div>
   );
 
   const EmployeeCard = ({ employee }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-            <span className="text-primary-600 font-semibold">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-primary-600 font-semibold text-sm sm:text-base">
               {(employee.name || '').split(' ').map(n => n[0]).join('')}
             </span>
           </div>
-          <div>
-            <h3 className="font-medium text-gray-900">{employee.name || 'Unknown Employee'}</h3>
-            <p className="text-sm text-gray-500">{employee.position || 'No Position'}</p>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-medium text-gray-900 text-sm sm:text-base truncate">{employee.name || 'Unknown Employee'}</h3>
+            <p className="text-xs sm:text-sm text-gray-500 truncate">{employee.position || 'No Position'}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="font-medium text-gray-900">${(employee.salary || 0).toLocaleString()}</p>
+        <div className="text-right flex-shrink-0 ml-3">
+          <p className="font-medium text-gray-900 text-sm sm:text-base">${(employee.salary || 0).toLocaleString()}</p>
           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
             employee.status === 'active' 
               ? 'bg-green-100 text-green-800' 
@@ -1824,9 +1825,9 @@ const Dashboard = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <h1 className="text-xl font-bold text-primary-600">Cloud Payroll</h1>
+                <h1 className="text-lg sm:text-xl font-bold text-primary-600">Cloud Payroll</h1>
               </div>
-              <div className="ml-6 flex items-center space-x-4">
+              <div className="hidden sm:ml-6 sm:flex items-center space-x-4">
                 <span className="text-sm text-gray-500">Welcome,</span>
                 <span className="text-sm font-medium text-gray-900">{userInfo?.name || 'User'}</span>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1840,11 +1841,11 @@ const Dashboard = () => {
                 </span>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {userRole === 'admin' && (
                 <button 
                   onClick={() => setActiveTab('reports')}
-                  className="text-sm text-gray-600 hover:text-gray-900"
+                  className="hidden sm:block text-sm text-gray-600 hover:text-gray-900"
                 >
                   Admin Panel
                 </button>
@@ -1869,18 +1870,18 @@ const Dashboard = () => {
       {/* Navigation */}
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+          <div className="flex overflow-x-auto space-x-4 sm:space-x-8 pb-2 sm:pb-0">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager', 'user'] },
               { id: 'employees', label: 'Employees', icon: Users, roles: ['admin', 'manager'] },
               { id: 'timesheets', label: 'Timesheets', icon: Clock, roles: ['admin', 'manager', 'user'] },
               { id: 'payroll', label: 'Payroll', icon: DollarSign, roles: ['admin', 'manager'] },
-              { id: 'reports', label: 'Reports', icon: Calendar, roles: ['admin', 'manager'] },
+              { id: 'reports', label: 'Reports', icon: FileText, roles: ['admin', 'manager'] },
             ].filter(tab => tab.roles.includes(userRole)).map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1929,12 +1930,12 @@ const Dashboard = () => {
             </div>
 
             {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Recent Employees */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200">
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-medium text-gray-900">Recent Employees</h2>
+                    <h2 className="text-base sm:text-lg font-medium text-gray-900">Recent Employees</h2>
                     <button 
                       onClick={() => setActiveTab('employees')}
                       className="text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -1943,7 +1944,7 @@ const Dashboard = () => {
                     </button>
                   </div>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-4 sm:p-6 space-y-4">
                   {employees.slice(0, 3).map((employee) => (
                     <EmployeeCard key={employee._id} employee={employee} />
                   ))}
@@ -1952,9 +1953,9 @@ const Dashboard = () => {
 
               {/* Recent Payrolls */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200">
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-medium text-gray-900">Recent Payrolls</h2>
+                    <h2 className="text-base sm:text-lg font-medium text-gray-900">Recent Payrolls</h2>
                     <button 
                       onClick={handleViewAllPayrollHistory}
                       className="text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -1963,7 +1964,7 @@ const Dashboard = () => {
                     </button>
                   </div>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-4 sm:p-6 space-y-4">
                   {recentPayrolls.map((payroll) => (
                     <PayrollCard key={payroll._id} payroll={payroll} />
                   ))}
@@ -1974,13 +1975,13 @@ const Dashboard = () => {
         )}
 
         {activeTab === 'employees' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 responsive-heading">Employees</h1>
               {(userRole === 'admin' || userRole === 'manager') && (
                 <button 
                   onClick={handleAddEmployee}
-                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2"
+                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2 w-full sm:w-auto justify-center btn-mobile"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Employee</span>
@@ -1990,7 +1991,7 @@ const Dashboard = () => {
 
             {/* Search and Filters */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="flex space-x-4">
+              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -2003,116 +2004,123 @@ const Dashboard = () => {
                     />
                   </div>
                 </div>
-                <button 
-                  onClick={() => setShowFilterModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  <Filter className="w-4 h-4" />
-                  <span>Filter</span>
-                  {statusFilter !== 'all' && (
-                    <span className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
-                      {statusFilter}
-                    </span>
-                  )}
-                </button>
-                <button 
-                  onClick={handleExport}
-                  className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Export</span>
-                </button>
+                <div className="flex space-x-2 sm:space-x-4">
+                  <button 
+                    onClick={() => setShowFilterModal(true)}
+                    className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex-1 sm:flex-none justify-center"
+                  >
+                    <Filter className="w-4 h-4" />
+                    <span className="hidden sm:inline">Filter</span>
+                    {statusFilter !== 'all' && (
+                      <span className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
+                        {statusFilter}
+                      </span>
+                    )}
+                  </button>
+                  <button 
+                    onClick={handleExport}
+                    className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex-1 sm:flex-none justify-center"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Export</span>
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Employees Table */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Employee
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Position
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Salary
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredEmployees.map((employee) => (
-                    <tr key={employee._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
-                            <span className="text-primary-600 font-medium text-sm">
-                              {(employee.name || '').split(' ').map(n => n[0]).join('')}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{employee.name}</div>
-                            <div className="text-sm text-gray-500">{employee.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {employee.position}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${employee.salary.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          employee.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {(employee.status || '').charAt(0).toUpperCase() + (employee.status || '').slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button 
-                            onClick={() => handleViewEmployee(employee)}
-                            className="text-primary-600 hover:text-primary-900" 
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {(userRole === 'admin' || userRole === 'manager') && (
-                            <>
-                              <button 
-                                onClick={() => handleEditEmployee(employee)}
-                                className="text-blue-600 hover:text-blue-900" 
-                                title="Edit"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              {userRole === 'admin' && (
-                                <button 
-                                  onClick={() => handleDeleteEmployee(employee)}
-                                  className="text-red-600 hover:text-red-900" 
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </td>
+              <div className="overflow-x-auto table-container custom-scrollbar">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Employee
+                      </th>
+                      <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Position
+                      </th>
+                      <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Salary
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredEmployees.map((employee) => (
+                      <tr key={employee._id} className="hover:bg-gray-50 table-row">
+                        <td className="px-4 sm:px-6 py-4">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
+                              <span className="text-primary-600 font-medium text-sm">
+                                {(employee.name || '').split(' ').map(n => n[0]).join('')}
+                              </span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium text-gray-900 truncate">{employee.name}</div>
+                              <div className="text-sm text-gray-500 truncate">{employee.email}</div>
+                              <div className="sm:hidden text-xs text-gray-400 mt-1">
+                                {employee.position} • ${employee.salary.toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {employee.position}
+                        </td>
+                        <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ${employee.salary.toLocaleString()}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            employee.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {(employee.status || '').charAt(0).toUpperCase() + (employee.status || '').slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end space-x-1 sm:space-x-2">
+                            <button 
+                              onClick={() => handleViewEmployee(employee)}
+                              className="text-primary-600 hover:text-primary-900 p-1" 
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {(userRole === 'admin' || userRole === 'manager') && (
+                              <>
+                                <button 
+                                  onClick={() => handleEditEmployee(employee)}
+                                  className="text-blue-600 hover:text-blue-900 p-1" 
+                                  title="Edit"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                {userRole === 'admin' && (
+                                  <button 
+                                    onClick={() => handleDeleteEmployee(employee)}
+                                    className="text-red-600 hover:text-red-900 p-1" 
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
