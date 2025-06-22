@@ -1,6 +1,11 @@
 # Cloud Payroll Backend API
 
-A comprehensive Node.js/Express backend API for the Cloud Payroll Management System.
+A comprehensive Node.js/Express backend API for the Cloud Payroll Management System. This backend is deployed and ready for production use.
+
+## 🚀 Live API
+
+- **API Base URL**: [https://cloud-payroll-backend.onrender.com](https://cloud-payroll-backend.onrender.com)
+- **Health Check**: [https://cloud-payroll-backend.onrender.com/api/health](https://cloud-payroll-backend.onrender.com/api/health)
 
 ## 🚀 Features
 
@@ -11,12 +16,12 @@ A comprehensive Node.js/Express backend API for the Cloud Payroll Management Sys
 - **Time Tracking**: Timesheet management with approval workflows
 - **Reporting**: Comprehensive reporting and analytics
 - **Security**: Rate limiting, input validation, and security headers
-- **Database**: MongoDB with Mongoose ODM
+- **Database**: MongoDB Atlas with Mongoose ODM
 
 ## 📋 Prerequisites
 
-- Node.js (v14 or higher)
-- MongoDB (local or MongoDB Atlas)
+- Node.js (v16 or higher)
+- MongoDB Atlas account
 - npm or yarn
 
 ## 🛠️ Installation
@@ -32,22 +37,32 @@ A comprehensive Node.js/Express backend API for the Cloud Payroll Management Sys
    ```
 
 3. **Environment Configuration**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Update the `.env` file with your configuration:
+   Create a `.env` file with your configuration:
    ```env
+   # Server Configuration
    PORT=5000
    NODE_ENV=development
-   MONGODB_URI=mongodb://localhost:27017/cloud-payroll
-   JWT_SECRET=your-super-secret-jwt-key
+
+   # Database Configuration
+   MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/cloud-payroll?retryWrites=true&w=majority
+
+   # JWT Configuration
+   JWT_SECRET=your-super-secret-jwt-key-here
    JWT_EXPIRE=24h
+
+   # Rate Limiting
+   RATE_LIMIT_WINDOW_MS=900000
+   RATE_LIMIT_MAX_REQUESTS=100
+
+   # Admin Default Credentials
+   ADMIN_EMAIL=admin@company.com
+   ADMIN_PASSWORD=ChangeThisToAStrongPassword123!
+   ADMIN_NAME=Admin User
    ```
 
 4. **Initialize Database**
    ```bash
-   npm run init-db
+   node utils/initDb.js
    ```
 
 5. **Start the server**
@@ -61,17 +76,16 @@ A comprehensive Node.js/Express backend API for the Cloud Payroll Management Sys
 
 ## 📊 Database Setup
 
-The backend uses MongoDB with the following collections:
+The backend uses MongoDB Atlas with the following collections:
 
 - **Users**: System users with authentication and roles
 - **Employees**: Employee records and information
 - **Payroll**: Payroll processing and history
 - **Timesheets**: Time tracking and project management
 
-### Default Admin User
-- Email: `admin@company.com`
-- Password: `admin123`
-- Role: `admin`
+### Default Users
+- **Admin**: `admin@company.com` / `ChangeThisToAStrongPassword123!`
+- **Manager**: `manager@company.com` / `manager123`
 
 ## 🔐 Authentication
 
@@ -134,6 +148,27 @@ Authorization: Bearer <your-jwt-token>
 - `GET /api/reports/department-summary` - Department summary
 - `GET /api/reports/export/:type` - Export report (Admin only)
 
+### Health Check
+- `GET /api/health` - API health status
+
+## 🚀 Deployment
+
+### Render Deployment
+
+1. **Connect your GitHub repository to Render**
+2. **Create a new Web Service**
+3. **Configure environment variables**:
+   - `MONGODB_URI`: Your MongoDB Atlas connection string
+   - `JWT_SECRET`: A secure random string
+   - `JWT_EXPIRE`: `24h`
+   - `NODE_ENV`: `production`
+   - `ADMIN_EMAIL`: `admin@company.com`
+   - `ADMIN_PASSWORD`: `ChangeThisToAStrongPassword123!`
+   - `ADMIN_NAME`: `Admin User`
+
+4. **Build Command**: `npm install`
+5. **Start Command**: `npm start`
+
 ## 🔧 Development
 
 ### Project Structure
@@ -153,19 +188,21 @@ payroll-backend/
 ### Available Scripts
 - `npm start` - Start production server
 - `npm run dev` - Start development server with nodemon
-- `npm run init-db` - Initialize database with sample data
+- `node utils/initDb.js` - Initialize database with sample data
 
 ### Environment Variables
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PORT` | Server port | 5000 |
 | `NODE_ENV` | Environment | development |
-| `MONGODB_URI` | MongoDB connection string | mongodb://localhost:27017/cloud-payroll |
+| `MONGODB_URI` | MongoDB Atlas connection string | - |
 | `JWT_SECRET` | JWT secret key | - |
 | `JWT_EXPIRE` | JWT expiration time | 24h |
 | `RATE_LIMIT_WINDOW_MS` | Rate limit window | 900000 (15 min) |
 | `RATE_LIMIT_MAX_REQUESTS` | Max requests per window | 100 |
-| `CORS_ORIGIN` | CORS allowed origin | http://localhost:3000 |
+| `ADMIN_EMAIL` | Default admin email | admin@company.com |
+| `ADMIN_PASSWORD` | Default admin password | ChangeThisToAStrongPassword123! |
+| `ADMIN_NAME` | Default admin name | Admin User |
 
 ## 🛡️ Security Features
 
@@ -198,70 +235,32 @@ All API responses follow a consistent format:
 }
 ```
 
-## 🧪 Testing
+## 🔒 CORS Configuration
 
-To test the API endpoints, you can use tools like:
-- Postman
-- Insomnia
-- curl
-- Thunder Client (VS Code extension)
+The API supports multiple origins for CORS:
+- `http://localhost:3000` (development)
+- `https://cloud-payroll.vercel.app` (production)
+- `https://cloud-payroll-42t0z030l-orjidavid18-6781s-projects.vercel.app` (preview)
 
-### Example API Calls
+## 🆘 Troubleshooting
 
-**Login:**
-```bash
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "admin@company.com", "password": "admin123"}'
-```
+### Common Issues
 
-**Get Current User:**
-```bash
-curl -X GET http://localhost:5000/api/auth/me \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
+1. **JWT ExpiresIn Error**: Ensure `JWT_EXPIRE` is set to a valid value like `24h`
+2. **Database Connection**: Verify your MongoDB Atlas connection string
+3. **CORS Errors**: Check that your frontend URL is in the allowed origins
+4. **Authentication**: Use the correct default credentials for testing
 
-## 🚀 Deployment
+### Health Check
 
-### Production Considerations
-1. Set `NODE_ENV=production`
-2. Use a strong `JWT_SECRET`
-3. Configure MongoDB Atlas or production MongoDB
-4. Set up proper CORS origins
-5. Configure rate limiting for production
-6. Use environment-specific variables
+Test the API health at: `GET /api/health`
 
-### Docker Deployment
-```dockerfile
-FROM node:16-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-EXPOSE 5000
-CMD ["npm", "start"]
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the ISC License.
-
-## 🆘 Support
-
-For support and questions:
-- Check the API documentation
-- Review the error logs
-- Ensure all environment variables are set correctly
-- Verify MongoDB connection
-
-## 🔄 Updates
-
-This backend is designed to work seamlessly with the Cloud Payroll frontend. Ensure both frontend and backend are running on their respective ports (3000 and 5000) for full functionality. 
+Expected response:
+```json
+{
+  "success": true,
+  "message": "Cloud Payroll API is running",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "environment": "production"
+}
+``` 
