@@ -84,11 +84,27 @@ const payrollSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
+    overtimePay: {
+      type: Number,
+      default: 0
+    },
     bonuses: {
       type: Number,
       default: 0
     },
+    customBonuses: {
+      type: Number,
+      default: 0
+    },
+    allowances: {
+      type: Number,
+      default: 0
+    },
     deductions: {
+      type: Number,
+      default: 0
+    },
+    customDeductions: {
       type: Number,
       default: 0
     },

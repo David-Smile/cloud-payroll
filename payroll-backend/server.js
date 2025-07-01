@@ -14,6 +14,7 @@ const timesheetRoutes = require('./routes/timesheets');
 const reportRoutes = require('./routes/reports');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Connect to Database
 connectDB();
