@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+const path = require('path');
 
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
@@ -34,20 +35,20 @@ app.use('/api/', limiter);
 
 // CORS Configuration
 const allowedOrigins = [
-  'http://localhoappdst:3000',
+  'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:3002',
   'https://cloud-payroll.vercel.app',
   'https://cloud-payroll-mrek8ytis-orjidavid18-6781s-projects.vercel.app',
   'https://cloud-payroll-42ksto4ym-orjidavid18-6781s-projects.vercel.app',
-  'https://cloud-payroll-o3hpfzeo0-orjidavid18-6781s-projects.vercel.app'
+  'https://cloud-payroll-o3hpfzeo0-orjidavid18-6781s-projects.vercel.app',
+  'https://cloud-payroll-42t0z030l-orjidavid18-6781s-projects.vercel.app',
+  'https://cloud-payroll-mox65qznm-orjidavid18-6781s-projects.vercel.app'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -85,6 +86,9 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/timesheets', timesheetRoutes);
 app.use('/api/reports', reportRoutes);
+
+// Serve static files (e.g., manifest.json) from a public directory if needed
+app.use(express.static(path.join(__dirname, '../payroll-frontend/public')));
 
 // 404 Handler
 app.use('*', (req, res) => {
