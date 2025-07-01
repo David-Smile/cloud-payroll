@@ -1,4 +1,4 @@
-import React, { useState, createContext } from 'react';
+import React, { useState, createContext, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -137,15 +137,6 @@ const Dashboard = () => {
 
   // Profile state
   const [isLoggedOut, setIsLoggedOut] = useState(false);
-  const [isSwitchingUser, setIsSwitchingUser] = useState(false);
-  const [switchUsername, setSwitchUsername] = useState("");
-  const [currentUser, setCurrentUser] = useState({
-    name: "Jane Doe",
-    role: "Payroll Manager",
-    email: "jane.doe@company.com",
-    department: "Finance Department",
-    bio: "Experienced payroll manager with a passion for accuracy and efficiency. Loves hiking and coffee."
-  });
 
   // Mock data for demonstration
   const payrollStats = {
@@ -497,23 +488,7 @@ const Dashboard = () => {
 
   // Profile handlers
   const handleSwitchUser = () => {
-    setIsSwitchingUser(true);
     setIsLoggedOut(false);
-  };
-
-  const handleSwitchUserSubmit = (e) => {
-    e.preventDefault();
-    if (switchUsername.trim()) {
-      setCurrentUser({
-        name: switchUsername,
-        role: "Payroll Manager",
-        email: `${(switchUsername || '').toLowerCase().replace(/ /g, ".")}@company.com`,
-        department: "Finance Department",
-        bio: "Welcome, new user! Update your profile soon."
-      });
-      setIsSwitchingUser(false);
-      setSwitchUsername("");
-    }
   };
 
   // Add state for KPI modals
@@ -1831,6 +1806,21 @@ const Dashboard = () => {
     }
   }, [activeTab]);
 
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showProfileCard, setShowProfileCard] = useState(false);
+  const profileRef = useRef();
+
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1871,10 +1861,27 @@ const Dashboard = () => {
                 <Settings className="w-5 h-5" />
               </button>
               <button 
-                onClick={() => navigate('/profile')}
-                className="p-2 text-gray-400 hover:text-gray-500"
+                ref={profileRef}
+                onClick={() => setShowProfileDropdown((v) => !v)}
+                className="p-2 text-gray-400 hover:text-gray-500 relative"
               >
                 <User className="w-5 h-5" />
+                {showProfileDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    <button
+                      onClick={() => { setShowProfileCard(true); setShowProfileDropdown(false); }}
+                      className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    >
+                      View Profile
+                    </button>
+                    <button
+                      onClick={() => { setShowProfileDropdown(false); logout(); navigate('/login'); }}
+                      className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
               </button>
             </div>
           </div>
@@ -3274,6 +3281,37 @@ const Dashboard = () => {
           {toast.message}
         </div>
       )}
+      {showProfileCard && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md flex flex-col items-center relative">
+            <button onClick={() => setShowProfileCard(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+            <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center mb-4">
+              <User className="w-10 h-10 text-primary-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">{userInfo?.name || 'User'}</h2>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${
+              userRole === 'admin' ? 'bg-red-100 text-red-800' :
+              userRole === 'manager' ? 'bg-blue-100 text-blue-800' :
+              'bg-green-100 text-green-800'
+            }`}>
+              {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+            </span>
+            <div className="text-sm text-gray-600 mb-2">{userInfo?.email}</div>
+            <div className="text-sm text-gray-600 mb-2">{userInfo?.department}</div>
+            <div className="w-full border-t border-gray-200 my-4"></div>
+            <div className="w-full mb-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">Bio</h3>
+              <p className="text-sm text-gray-700">{userInfo?.bio || 'No bio provided.'}</p>
+            </div>
+            <button
+              onClick={() => { setShowProfileCard(false); logout(); navigate('/login'); }}
+              className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold shadow mt-1"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3590,20 +3628,12 @@ const ProfilePage = () => {
           <h3 className="text-sm font-semibold text-gray-700 mb-1">Bio</h3>
           <p className="text-sm text-gray-700">{userInfo?.bio || 'No bio provided.'}</p>
         </div>
-        <div className="flex w-full space-x-3 mt-4">
-          <button
-            onClick={() => navigate('/login')}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Switch User
-          </button>
-          <button
-            onClick={() => { logout(); navigate('/login'); }}
-            className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-          >
-            Logout
-          </button>
-        </div>
+        <button
+          onClick={() => { logout(); navigate('/login'); }}
+          className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold shadow mt-1"
+        >
+          Logout
+        </button>
       </div>
     </div>
   );
