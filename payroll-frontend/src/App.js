@@ -1821,6 +1821,21 @@ const Dashboard = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // 1. Add state for settings dropdown:
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const settingsRef = useRef();
+
+  // 2. Add click outside logic for settings dropdown:
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+        setShowSettingsDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1854,11 +1869,25 @@ const Dashboard = () => {
                   Admin Panel
                 </button>
               )}
-              <button 
-                onClick={handleOpenSettings}
-                className="p-2 text-gray-400 hover:text-gray-500"
+              <button
+                ref={settingsRef}
+                onClick={() => setShowSettingsDropdown(v => !v)}
+                className="p-2 text-gray-400 hover:text-gray-500 relative"
               >
                 <Settings className="w-5 h-5" />
+                {showSettingsDropdown && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    <div className="px-4 py-3 flex items-center justify-between">
+                      <span className="text-sm text-gray-700">Dark Mode</span>
+                      <button
+                        onClick={handleToggleDarkMode}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${darkMode ? 'bg-primary-600' : 'bg-gray-200'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${darkMode ? 'translate-x-5' : 'translate-x-1'}`}></span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </button>
               <button 
                 ref={profileRef}
@@ -1891,7 +1920,7 @@ const Dashboard = () => {
       {/* Navigation */}
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex overflow-x-auto space-x-4 sm:space-x-8 pb-2 sm:pb-0">
+          <div className="flex overflow-x-auto space-x-4 sm:space-x-8 pb-2 sm:pb-0 nav-tabs">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager', 'user'] },
               { id: 'employees', label: 'Employees', icon: Users, roles: ['admin', 'manager'] },
@@ -1917,11 +1946,11 @@ const Dashboard = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 responsive-padding">
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 responsive-grid">
               <StatCard 
                 icon={DollarSign} 
                 title="Total Payroll" 
@@ -2971,41 +3000,6 @@ const Dashboard = () => {
         onClose={() => setShowPayrollDetailsModal(false)}
         payroll={selectedPayroll}
         employees={employees}
-      />
-
-      <SettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-      />
-
-      {/* Timesheet Modals */}
-      <TimesheetModal
-        isOpen={showTimesheetModal}
-        onClose={() => {
-          setShowTimesheetModal(false);
-          setSelectedTimesheet(null);
-        }}
-        timesheet={selectedTimesheet}
-        employees={employees}
-        onSubmit={(timesheetData) => {
-          if (selectedTimesheet) {
-            // Update existing timesheet
-            updateTimesheet(timesheetData);
-          } else {
-            // Add new timesheet
-            addNewTimesheet(timesheetData);
-          }
-        }}
-        mode={selectedTimesheet ? 'edit' : 'add'}
-      />
-
-      <TimesheetDetailsModal
-        isOpen={showTimesheetDetailsModal}
-        onClose={() => {
-          setShowTimesheetDetailsModal(false);
-          setSelectedTimesheet(null);
-        }}
-        timesheet={selectedTimesheet}
       />
 
       {showProcessPayrollConfirm && (
