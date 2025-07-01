@@ -39,7 +39,8 @@ const allowedOrigins = [
   'http://localhost:3002',
   'https://cloud-payroll.vercel.app',
   'https://cloud-payroll-mrek8ytis-orjidavid18-6781s-projects.vercel.app',
-  'https://cloud-payroll-42ksto4ym-orjidavid18-6781s-projects.vercel.app'
+  'https://cloud-payroll-42ksto4ym-orjidavid18-6781s-projects.vercel.app',
+  'https://cloud-payroll-o3hpfzeo0-orjidavid18-6781s-projects.vercel.app'
 ];
 
 app.use(cors({
