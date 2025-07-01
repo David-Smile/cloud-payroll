@@ -34,6 +34,8 @@ app.use('/api/', limiter);
 // CORS Configuration
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
   'https://cloud-payroll.vercel.app',
   'https://cloud-payroll-mrek8ytis-orjidavid18-6781s-projects.vercel.app'
 ];

@@ -1,5 +1,5 @@
 import React, { useState, createContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Clock, 
@@ -20,12 +20,14 @@ import {
   CalendarDays,
   TrendingUp,
   User,
-  FileText
+  FileText,
+  Info
 } from 'lucide-react';
 import './App.css';
 import LoginPage from './LoginPage';
 import ProtectedRoute from './ProtectedRoute';
 import { apiFetch } from './api';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 // Authentication Context
 export const AuthContext = createContext();
@@ -89,6 +91,7 @@ function App() {
               <Dashboard />
             </ProtectedRoute>
           } />
+          <Route path="/profile" element={<ProfilePage />} />
         </Routes>
       </Router>
     </AuthContext.Provider>
@@ -98,6 +101,7 @@ function App() {
 // Dashboard Component
 const Dashboard = () => {
   const { userRole, userInfo, logout } = React.useContext(AuthContext);
+  const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,7 +136,6 @@ const Dashboard = () => {
   const [darkMode, setDarkMode] = useState(false);
 
   // Profile state
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [isLoggedOut, setIsLoggedOut] = useState(false);
   const [isSwitchingUser, setIsSwitchingUser] = useState(false);
   const [switchUsername, setSwitchUsername] = useState("");
@@ -149,7 +152,8 @@ const Dashboard = () => {
     totalEmployees: employees.length,
     activeEmployees: employees.filter(emp => emp.status === 'active').length,
     totalPayroll: employees.reduce((sum, emp) => sum + emp.salary, 0),
-    pendingPayments: 3
+    pendingPayments: 3,
+    nextPayrollDate: 'Dec 15'
   };
 
   const recentPayrolls = payrollHistory.slice(0, 3); // Get the 3 most recent payrolls
@@ -492,15 +496,6 @@ const Dashboard = () => {
   };
 
   // Profile handlers
-  const handleOpenProfile = () => {
-    setShowProfileModal(true);
-  };
-
-  const handleLogout = () => {
-    logout(); // Use the new authentication context logout
-    setShowProfileModal(false);
-  };
-
   const handleSwitchUser = () => {
     setIsSwitchingUser(true);
     setIsLoggedOut(false);
@@ -521,14 +516,19 @@ const Dashboard = () => {
     }
   };
 
-  const handleCloseProfile = () => {
-    setIsSwitchingUser(false);
-    setIsLoggedOut(false);
-    setShowProfileModal(false);
-  };
+  // Add state for KPI modals
+  const [showKpiModal, setShowKpiModal] = useState(null); // 'totalPayroll', 'activeEmployees', 'pendingPayments', 'nextPayrollDate', or null
 
-  const StatCard = ({ icon: Icon, title, value, change, color = 'blue' }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 stat-card">
+  // Update StatCard to be clickable
+  const StatCard = ({ icon: Icon, title, value, change, color = 'blue', onClick }) => (
+    <div
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 stat-card cursor-pointer hover:shadow-lg transition-shadow duration-200 ${onClick ? 'ring-1 ring-primary-200' : ''}`}
+      onClick={onClick}
+      tabIndex={onClick ? 0 : undefined}
+      role={onClick ? 'button' : undefined}
+      aria-pressed={onClick ? 'false' : undefined}
+      style={{ outline: 'none' }}
+    >
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{title}</p>
@@ -1614,96 +1614,6 @@ const Dashboard = () => {
     averageHoursPerDay: timesheets.length > 0 ? (timesheets.reduce((sum, ts) => sum + ts.totalHours, 0) / timesheets.length).toFixed(2) : 0
   };
 
-  // Profile Modal (standard profile with custom actions)
-  const ProfileModal = ({ isOpen, onClose }) => {
-    if (!isOpen) return null;
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md relative">
-          <button onClick={handleCloseProfile} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-          {isLoggedOut ? (
-            <div className="flex flex-col items-center justify-center h-64">
-              <User className="w-16 h-16 text-gray-300 mb-4" />
-              <h2 className="text-xl font-bold text-gray-700 mb-2">You are logged out</h2>
-              <button
-                onClick={() => setIsLoggedOut(false)}
-                className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-              >
-                Log In Again
-              </button>
-            </div>
-          ) : isSwitchingUser ? (
-            <form onSubmit={handleSwitchUserSubmit} className="flex flex-col items-center space-y-4">
-              <User className="w-16 h-16 text-primary-600 mb-2" />
-              <h2 className="text-xl font-bold text-gray-900">Switch User</h2>
-              <input
-                type="text"
-                placeholder="Enter username"
-                value={switchUsername}
-                onChange={e => setSwitchUsername(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              />
-              <button
-                type="submit"
-                className="w-full px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-              >
-                Switch
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsSwitchingUser(false)}
-                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            </form>
-          ) : (
-            <div className="flex flex-col items-center space-y-4">
-              <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center mb-2 shadow">
-                <User className="w-12 h-12 text-primary-600" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-2xl font-semibold text-gray-900">{currentUser.name}</h3>
-                <p className="text-sm text-primary-600 font-medium">{currentUser.role}</p>
-                <p className="text-sm text-gray-500">{currentUser.email}</p>
-                <p className="text-sm text-gray-500">{currentUser.department}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4 w-full mt-2">
-                <h4 className="text-md font-medium text-gray-900 mb-2">Bio</h4>
-                <p className="text-sm text-gray-700">{currentUser.bio}</p>
-              </div>
-              <div className="flex flex-col space-y-2 w-full mt-4">
-                <button
-                  onClick={handleSwitchUser}
-                  className="w-full px-4 py-2 border border-primary-600 text-primary-600 rounded-md hover:bg-primary-50"
-                >
-                  Switch User
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                >
-                  Logout
-                </button>
-              </div>
-              <div className="flex justify-end w-full mt-2">
-                <button
-                  onClick={handleCloseProfile}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   // Fetch employees from backend on mount
   React.useEffect(() => {
     async function fetchEmployees() {
@@ -1817,6 +1727,110 @@ const Dashboard = () => {
     }
   };
 
+  // Add state for confirmation modal
+  const [showProcessPayrollConfirm, setShowProcessPayrollConfirm] = useState(false);
+  const [processPayrollError, setProcessPayrollError] = useState(null);
+  const [showPayrollSuccess, setShowPayrollSuccess] = useState(false);
+
+  // Add state for Payroll Summary breakdown modal
+  const [showSummaryBreakdown, setShowSummaryBreakdown] = useState(null); // 'employees', 'gross', 'taxes', 'benefits', 'net', or null
+
+  // Add state for export/print modals and errors
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [exportError, setExportError] = useState(null);
+  const [printError, setPrintError] = useState(null);
+
+  // Add state for search, filter, pagination, loading, and error
+  const [payrollSearch, setPayrollSearch] = useState('');
+  const [payrollStatusFilter, setPayrollStatusFilter] = useState('all');
+  const [payrollPage, setPayrollPage] = useState(1);
+  const [payrollsPerPage] = useState(5);
+  const [payrollLoading, setPayrollLoading] = useState(false);
+  const [payrollError, setPayrollError] = useState(null);
+
+  // Filter and paginate payrolls
+  const filteredPayrolls = payrollHistory.filter(p =>
+    (payrollStatusFilter === 'all' || p.status === payrollStatusFilter) &&
+    (payrollSearch === '' || p.period.toLowerCase().includes(payrollSearch.toLowerCase()) || (p.status && p.status.toLowerCase().includes(payrollSearch.toLowerCase())))
+  );
+  const paginatedPayrolls = filteredPayrolls.slice((payrollPage - 1) * payrollsPerPage, payrollPage * payrollsPerPage);
+  const totalPayrollPages = Math.ceil(filteredPayrolls.length / payrollsPerPage);
+
+  // Toast notification state
+  const [toast, setToast] = useState({ message: '', type: '', visible: false });
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type, visible: true });
+    setTimeout(() => setToast({ ...toast, visible: false }), 3500);
+  };
+
+  // Timesheet rejection modal state
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectingTimesheet, setRejectingTimesheet] = useState(null);
+
+  // Define confirmRejectTimesheet at the top level of Dashboard
+  const confirmRejectTimesheet = async () => {
+    if (!rejectReason.trim()) {
+      showToast('Rejection reason is required.', 'error');
+      return;
+    }
+    try {
+      const { response, data } = await apiFetch(`/timesheets/${rejectingTimesheet._id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ rejectionReason: rejectReason })
+      });
+      if (response.ok && data.success) {
+        setTimesheets(timesheets.map(ts =>
+          ts._id === rejectingTimesheet._id ? data.timesheet : ts
+        ));
+        setShowRejectModal(false);
+        setRejectingTimesheet(null);
+        showToast('Timesheet rejected.', 'success');
+      } else {
+        showToast(data.message || 'Failed to reject timesheet', 'error');
+      }
+    } catch (error) {
+      showToast('Error rejecting timesheet', 'error');
+    }
+  };
+
+  // Advanced analytics state
+  const [payrollSummary, setPayrollSummary] = useState(null);
+  const [timesheetSummary, setTimesheetSummary] = useState(null);
+  const [departmentSummary, setDepartmentSummary] = useState([]);
+  const [timesheetTrends, setTimesheetTrends] = useState([]);
+  const [topEmployees, setTopEmployees] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState(null);
+
+  // Fetch backend analytics when Reports tab is active
+  React.useEffect(() => {
+    if (activeTab === 'reports') {
+      setReportsLoading(true);
+      setReportsError(null);
+      Promise.all([
+        apiFetch('/reports/payroll-summary'),
+        apiFetch('/reports/timesheet'),
+        apiFetch('/reports/department-summary'),
+        apiFetch('/reports/timesheet-trends'),
+        apiFetch('/reports/top-employees')
+      ]).then(([payrollRes, timesheetRes, deptRes, trendsRes, topEmpRes]) => {
+        setPayrollSummary(payrollRes.data?.data || null);
+        setTimesheetSummary(timesheetRes.data?.data || null);
+        setDepartmentSummary(deptRes.data?.data || []);
+        setTimesheetTrends(trendsRes.data?.data || []);
+        setTopEmployees(topEmpRes.data?.data || []);
+        setReportsLoading(false);
+      }).catch(err => {
+        setReportsError('Failed to load reports data');
+        setReportsLoading(false);
+      });
+    }
+  }, [activeTab]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1857,7 +1871,7 @@ const Dashboard = () => {
                 <Settings className="w-5 h-5" />
               </button>
               <button 
-                onClick={handleOpenProfile}
+                onClick={() => navigate('/profile')}
                 className="p-2 text-gray-400 hover:text-gray-500"
               >
                 <User className="w-5 h-5" />
@@ -1902,30 +1916,33 @@ const Dashboard = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatCard 
-                icon={Users} 
-                title="Total Employees" 
-                value={payrollStats.totalEmployees}
-                change={5}
-                color="blue"
-              />
-              <StatCard 
-                icon={Clock} 
-                title="Active Employees" 
-                value={payrollStats.activeEmployees}
-                color="green"
-              />
-              <StatCard 
                 icon={DollarSign} 
                 title="Total Payroll" 
                 value={`$${payrollStats.totalPayroll.toLocaleString()}`}
                 change={2.5}
                 color="yellow"
+                onClick={() => setShowKpiModal('totalPayroll')}
               />
               <StatCard 
-                icon={Calendar} 
+                icon={Users} 
+                title="Active Employees" 
+                value={payrollStats.activeEmployees}
+                color="green"
+                onClick={() => setShowKpiModal('activeEmployees')}
+              />
+              <StatCard 
+                icon={Clock} 
                 title="Pending Payments" 
                 value={payrollStats.pendingPayments}
                 color="red"
+                onClick={() => setShowKpiModal('pendingPayments')}
+              />
+              <StatCard 
+                icon={Calendar} 
+                title="Next Payroll Date" 
+                value={payrollStats.nextPayrollDate || 'N/A'}
+                color="blue"
+                onClick={() => setShowKpiModal('nextPayrollDate')}
               />
             </div>
 
@@ -1953,9 +1970,9 @@ const Dashboard = () => {
 
               {/* Recent Payrolls */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-base sm:text-lg font-medium text-gray-900">Recent Payrolls</h2>
+                    <h2 className="text-lg font-medium text-gray-900">Recent Payroll History</h2>
                     <button 
                       onClick={handleViewAllPayrollHistory}
                       className="text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -1964,10 +1981,44 @@ const Dashboard = () => {
                     </button>
                   </div>
                 </div>
-                <div className="p-4 sm:p-6 space-y-4">
-                  {recentPayrolls.map((payroll) => (
-                    <PayrollCard key={payroll._id} payroll={payroll} />
-                  ))}
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {recentPayrolls.map((payroll) => (
+                      <div key={payroll._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div className="flex-1 cursor-pointer" onClick={() => handleViewPayrollDetails(payroll)}>
+                          <h3 className="font-medium text-gray-900">{payroll.period}</h3>
+                          <p className="text-sm text-gray-500">{new Date(payroll.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-gray-900">${(payroll.netAmount || 0).toLocaleString()}</p>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            payroll.status === 'processed' ? 'bg-green-100 text-green-800' :
+                            payroll.status === 'paid' ? 'bg-blue-100 text-blue-800' :
+                            payroll.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {payroll.status.charAt(0).toUpperCase() + payroll.status.slice(1)}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                          <button 
+                            onClick={() => handleViewPayrollDetails(payroll)}
+                            className="text-primary-600 hover:text-primary-900" 
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDownloadPayroll(payroll)}
+                            className="text-green-600 hover:text-green-900" 
+                            title="Download"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -2453,11 +2504,11 @@ const Dashboard = () => {
               </div>
               <div className="p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Payroll Period Selection */}
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">Select Payroll Period</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
+                  {/* Payroll Period Selector - visually prominent with helper text */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Payroll Period</h3>
+                    <div className="flex items-center space-x-6">
+                      <label className="flex items-center space-x-2 cursor-pointer">
                         <input
                           type="radio"
                           id="biweekly"
@@ -2467,11 +2518,10 @@ const Dashboard = () => {
                           onChange={(e) => handlePayrollPeriodChange(e.target.value)}
                           className="text-primary-600 focus:ring-primary-500"
                         />
-                        <label htmlFor="biweekly" className="text-sm text-gray-700">
-                          Bi-weekly (Every 2 weeks)
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-3">
+                        <span className="text-sm text-gray-700 font-medium">Bi-weekly</span>
+                        <span className="ml-1 text-xs text-gray-400">(Every 2 weeks)</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
                         <input
                           type="radio"
                           id="monthly"
@@ -2481,11 +2531,11 @@ const Dashboard = () => {
                           onChange={(e) => handlePayrollPeriodChange(e.target.value)}
                           className="text-primary-600 focus:ring-primary-500"
                         />
-                        <label htmlFor="monthly" className="text-sm text-gray-700">
-                          Monthly
-                        </label>
-                      </div>
+                        <span className="text-sm text-gray-700 font-medium">Monthly</span>
+                        <span className="ml-1 text-xs text-gray-400">(Once per month)</span>
+                      </label>
                     </div>
+                    <p className="mt-2 text-xs text-gray-500">Choose how often you want to process payroll for your employees.</p>
                   </div>
 
                   {/* Payroll Summary */}
@@ -2494,23 +2544,33 @@ const Dashboard = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Total Employees:</span>
-                        <span className="font-medium">{payrollStats.activeEmployees}</span>
+                        <button className="font-medium text-primary-600 hover:underline" onClick={() => setShowSummaryBreakdown('employees')}>
+                          {payrollStats.activeEmployees}
+                        </button>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Gross Pay:</span>
-                        <span className="font-medium">${payrollStats.totalPayroll.toLocaleString()}</span>
+                        <button className="font-medium text-primary-600 hover:underline" onClick={() => setShowSummaryBreakdown('gross')}>
+                          ${payrollStats.totalPayroll.toLocaleString()}
+                        </button>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Taxes (Est.):</span>
-                        <span className="font-medium">${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}</span>
+                        <button className="font-medium text-primary-600 hover:underline" onClick={() => setShowSummaryBreakdown('taxes')}>
+                          ${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}
+                        </button>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Benefits:</span>
-                        <span className="font-medium">${Math.round(payrollStats.totalPayroll * 0.15).toLocaleString()}</span>
+                        <button className="font-medium text-primary-600 hover:underline" onClick={() => setShowSummaryBreakdown('benefits')}>
+                          ${Math.round(payrollStats.totalPayroll * 0.15).toLocaleString()}
+                        </button>
                       </div>
                       <div className="border-t pt-2 flex justify-between font-medium">
                         <span>Net Pay:</span>
-                        <span className="text-green-600">${Math.round(payrollStats.totalPayroll * 0.6).toLocaleString()}</span>
+                        <button className="text-green-600 hover:underline" onClick={() => setShowSummaryBreakdown('net')}>
+                          ${Math.round(payrollStats.totalPayroll * 0.6).toLocaleString()}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2519,7 +2579,7 @@ const Dashboard = () => {
                 {/* Action Buttons */}
                 <div className="flex space-x-3 mt-6 pt-6 border-t border-gray-200">
                   <button 
-                    onClick={handleProcessPayroll}
+                    onClick={() => setShowProcessPayrollConfirm(true)}
                     disabled={processingPayroll}
                     className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -2536,19 +2596,19 @@ const Dashboard = () => {
                     )}
                   </button>
                   <button 
-                    onClick={handlePreviewPayroll}
+                    onClick={() => setShowPayrollPreview(true)}
                     className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   >
                     Preview Payroll
                   </button>
                   <button 
-                    onClick={handleExportPayrollReport}
+                    onClick={() => setShowExportModal(true)}
                     className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   >
                     Export Report
                   </button>
                   <button 
-                    onClick={handlePrintPayroll}
+                    onClick={() => setShowPrintModal(true)}
                     className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   >
                     Print Report
@@ -2560,53 +2620,131 @@ const Dashboard = () => {
             {/* Recent Payroll History */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <h2 className="text-lg font-medium text-gray-900">Recent Payroll History</h2>
-                  <button 
-                    onClick={handleViewAllPayrollHistory}
-                    className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                  >
-                    View All
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-center">
+                    <input
+                      type="text"
+                      placeholder="Search by period or status..."
+                      value={payrollSearch}
+                      onChange={e => setPayrollSearch(e.target.value)}
+                      className="border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <div className="flex gap-1">
+                      {['all', 'draft', 'processed', 'paid'].map(status => (
+                        <button
+                          key={status}
+                          onClick={() => setPayrollStatusFilter(status)}
+                          className={`px-2 py-1 rounded text-xs font-medium ${payrollStatusFilter === status ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                        >
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="p-6">
-                <div className="space-y-4">
-                  {recentPayrolls.map((payroll) => (
-                    <div key={payroll._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{payroll.period}</h3>
-                        <p className="text-sm text-gray-500">{new Date(payroll.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">${(payroll.netAmount || 0).toLocaleString()}</p>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          payroll.status === 'processed' ? 'bg-green-100 text-green-800' :
-                          payroll.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {payroll.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button 
-                          onClick={() => handleViewPayrollDetails(payroll)}
-                          className="text-primary-600 hover:text-primary-900" 
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDownloadPayroll(payroll)}
-                          className="text-green-600 hover:text-green-900" 
-                          title="Download"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                      </div>
+                {payrollLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mr-2"></div>
+                    <span className="text-primary-600">Loading payrolls...</span>
+                  </div>
+                ) : payrollError ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <p className="text-red-700">{payrollError}</p>
+                  </div>
+                ) : filteredPayrolls.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No payrolls found. Try adjusting your search or filters.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      {paginatedPayrolls.map((payroll) => (
+                        <div key={payroll._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div className="flex-1 cursor-pointer" onClick={() => handleViewPayrollDetails(payroll)}>
+                            <h3 className="font-medium text-gray-900">{payroll.period}</h3>
+                            <p className="text-sm text-gray-500">{new Date(payroll.createdAt).toLocaleDateString()}</p>
+                            {payroll.processedBy && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                Processed by {typeof payroll.processedBy === 'object' ? (payroll.processedBy.name || payroll.processedBy.email || payroll.processedBy._id) : payroll.processedBy}
+                                {payroll.processedAt && ` on ${new Date(payroll.processedAt).toLocaleDateString()}`}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-gray-900">${(payroll.netAmount || 0).toLocaleString()}</p>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              payroll.status === 'processed' ? 'bg-green-100 text-green-800' :
+                              payroll.status === 'paid' ? 'bg-blue-100 text-blue-800' :
+                              payroll.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`} title={
+                              payroll.status === 'draft' ? 'Payroll is in draft and not finalized.' :
+                              payroll.status === 'processed' ? 'Payroll has been processed.' :
+                              payroll.status === 'paid' ? 'Payroll has been paid.' :
+                              'Unknown status'
+                            }>
+                              {payroll.status === 'draft' && <AlertCircle className="w-3 h-3 mr-1 text-yellow-500" />}
+                              {payroll.status === 'processed' && <CheckCircle className="w-3 h-3 mr-1 text-green-500" />}
+                              {payroll.status === 'paid' && <DollarSign className="w-3 h-3 mr-1 text-blue-500" />}
+                              {payroll.status.charAt(0).toUpperCase() + payroll.status.slice(1)}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 ml-4 relative group">
+                            <button 
+                              onClick={() => handleViewPayrollDetails(payroll)}
+                              className="text-primary-600 hover:text-primary-900 p-1 rounded-full" 
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDownloadPayroll(payroll)}
+                              className="text-green-600 hover:text-green-900 p-1 rounded-full" 
+                              title="Download"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                            <div className="relative inline-block text-left">
+                              <button className="p-1 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none" title="More actions">
+                                <span className="sr-only">Open options</span>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.5"/><circle cx="19.5" cy="12" r="1.5"/><circle cx="4.5" cy="12" r="1.5"/></svg>
+                              </button>
+                              {/* Dropdown menu (expand as needed) */}
+                              {/* <div className="origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10 hidden group-hover:block">
+                                <div className="py-1">
+                                  <button className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">Print</button>
+                                </div>
+                              </div> */}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                    {/* Pagination */}
+                    {totalPayrollPages > 1 && (
+                      <div className="flex justify-center items-center mt-6 space-x-2">
+                        <button
+                          onClick={() => setPayrollPage(payrollPage - 1)}
+                          disabled={payrollPage === 1}
+                          className="px-3 py-1 rounded bg-gray-100 text-gray-700 disabled:opacity-50"
+                        >
+                          Prev
+                        </button>
+                        <span className="text-sm text-gray-600">Page {payrollPage} of {totalPayrollPages}</span>
+                        <button
+                          onClick={() => setPayrollPage(payrollPage + 1)}
+                          disabled={payrollPage === totalPayrollPages}
+                          className="px-3 py-1 rounded bg-gray-100 text-gray-700 disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -2620,275 +2758,135 @@ const Dashboard = () => {
                 <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
                 <p className="text-gray-600 mt-1">Generate comprehensive reports and view analytics</p>
               </div>
-              <button 
-                onClick={() => {
-                  const csvContent = [
-                    ['Report Type', 'Generated Date', 'Total Employees', 'Total Payroll'],
-                    ['Payroll Summary', new Date().toLocaleDateString(), payrollStats.totalEmployees, `$${payrollStats.totalPayroll.toLocaleString()}`],
-                    ['Employee Summary', new Date().toLocaleDateString(), payrollStats.totalEmployees, 'N/A'],
-                    ['Tax Summary', new Date().toLocaleDateString(), payrollStats.activeEmployees, `$${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}`],
-                  ].map(row => row.join(',')).join('\n');
-
-                  const blob = new Blob([csvContent], { type: 'text/csv' });
-                  const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `reports_summary_${new Date().toISOString().split('T')[0]}.csv`;
-                  a.click();
-                  window.URL.revokeObjectURL(url);
-                }}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2"
-              >
-                <Download className="w-4 h-4" />
-                <span>Export All Reports</span>
-              </button>
             </div>
-
-            {/* Report Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Payroll Report Card */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <DollarSign className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <button 
-                    onClick={() => {
-                      const csvContent = [
-                        ['Employee', 'Position', 'Salary', 'Monthly Pay', 'Taxes', 'Benefits', 'Net Pay'],
-                        ...employees.map(emp => {
-                          const monthlyPay = emp.salary / 12;
-                          const taxes = monthlyPay * 0.25;
-                          const benefits = monthlyPay * 0.15;
-                          const netPay = monthlyPay - taxes - benefits;
-                          return [
-                            emp.name,
-                            emp.position,
-                            emp.salary,
-                            monthlyPay.toLocaleString(),
-                            taxes.toLocaleString(),
-                            benefits.toLocaleString(),
-                            netPay.toLocaleString()
-                          ];
-                        })
-                      ].map(row => row.join(',')).join('\n');
-
-                      const blob = new Blob([csvContent], { type: 'text/csv' });
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `payroll_report_${new Date().toISOString().split('T')[0]}.csv`;
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                    }}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    Export
-                  </button>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Payroll Report</h3>
-                <p className="text-gray-600 text-sm mb-4">Detailed payroll breakdown for all employees</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Payroll:</span>
-                    <span className="font-medium">${payrollStats.totalPayroll.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Active Employees:</span>
-                    <span className="font-medium">{payrollStats.activeEmployees}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Average Salary:</span>
-                    <span className="font-medium">${Math.round(payrollStats.totalPayroll / payrollStats.totalEmployees).toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Employee Report Card */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Users className="w-6 h-6 text-green-600" />
-                  </div>
-                  <button 
-                    onClick={() => {
-                      const csvContent = [
-                        ['Name', 'Position', 'Department', 'Salary', 'Status', 'Email'],
-                        ...employees.map(emp => [
-                          emp.name,
-                          emp.position,
-                          emp.department,
-                          emp.salary,
-                          emp.status,
-                          emp.email
-                        ])
-                      ].map(row => row.join(',')).join('\n');
-
-                      const blob = new Blob([csvContent], { type: 'text/csv' });
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `employee_report_${new Date().toISOString().split('T')[0]}.csv`;
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                    }}
-                    className="text-green-600 hover:text-green-800 text-sm font-medium"
-                  >
-                    Export
-                  </button>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Employee Report</h3>
-                <p className="text-gray-600 text-sm mb-4">Complete employee information and statistics</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Employees:</span>
-                    <span className="font-medium">{payrollStats.totalEmployees}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Active:</span>
-                    <span className="font-medium text-green-600">{payrollStats.activeEmployees}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Inactive:</span>
-                    <span className="font-medium text-gray-600">{payrollStats.totalEmployees - payrollStats.activeEmployees}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tax Report Card */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <Calendar className="w-6 h-6 text-yellow-600" />
-                  </div>
-                  <button 
-                    onClick={() => {
-                      const csvContent = [
-                        ['Tax Type', 'Rate', 'Amount', 'Description'],
-                        ['Federal Tax', '25%', `$${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}`, 'Federal income tax'],
-                        ['State Tax', '8%', `$${Math.round(payrollStats.totalPayroll * 0.08).toLocaleString()}`, 'State income tax'],
-                        ['Social Security', '6.2%', `$${Math.round(payrollStats.totalPayroll * 0.062).toLocaleString()}`, 'Social Security tax'],
-                        ['Medicare', '1.45%', `$${Math.round(payrollStats.totalPayroll * 0.0145).toLocaleString()}`, 'Medicare tax'],
-                        ['Unemployment', '6%', `$${Math.round(payrollStats.totalPayroll * 0.06).toLocaleString()}`, 'Unemployment insurance'],
-                      ].map(row => row.join(',')).join('\n');
-
-                      const blob = new Blob([csvContent], { type: 'text/csv' });
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `tax_report_${new Date().toISOString().split('T')[0]}.csv`;
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                    }}
-                    className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
-                  >
-                    Export
-                  </button>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Tax Report</h3>
-                <p className="text-gray-600 text-sm mb-4">Tax calculations and deductions summary</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Taxes:</span>
-                    <span className="font-medium">${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Federal Tax:</span>
-                    <span className="font-medium">${Math.round(payrollStats.totalPayroll * 0.25).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">State Tax:</span>
-                    <span className="font-medium">${Math.round(payrollStats.totalPayroll * 0.08).toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Detailed Reports Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Payroll History Chart */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h2 className="text-lg font-medium text-gray-900">Payroll History</h2>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-4">
-                    {payrollHistory.map((payroll) => (
-                      <div key={payroll._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <h3 className="font-medium text-gray-900">{payroll.period}</h3>
-                          <p className="text-sm text-gray-500">{new Date(payroll.createdAt).toLocaleDateString()}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900">${(payroll.netAmount || 0).toLocaleString()}</p>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            payroll.status === 'processed' ? 'bg-green-100 text-green-800' :
-                            payroll.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {payroll.status}
-                          </span>
-                        </div>
+            {reportsLoading ? (
+              <div className="text-center py-8 text-gray-500">Loading reports...</div>
+            ) : reportsError ? (
+              <div className="text-center py-8 text-red-500">{reportsError}</div>
+            ) : (
+              <>
+                {/* Report Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Payroll Report Card */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Payroll Summary</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Payroll:</span>
+                        <span className="font-medium">${payrollSummary?.totalPayroll?.toLocaleString() || 0}</span>
                       </div>
-                    ))}
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Net Pay:</span>
+                        <span className="font-medium">${payrollSummary?.totalNetPay?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Taxes:</span>
+                        <span className="font-medium">${payrollSummary?.totalTaxes?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Deductions:</span>
+                        <span className="font-medium">${payrollSummary?.totalDeductions?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Payrolls Processed:</span>
+                        <span className="font-medium">{payrollSummary?.payrollCount || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Active Employees:</span>
+                        <span className="font-medium">{payrollSummary?.employeeCount || 0}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Department Breakdown */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h2 className="text-lg font-medium text-gray-900">Department Breakdown</h2>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-4">
-                    {Array.from(new Set(employees.map(emp => emp.department))).map((dept) => {
-                      const deptEmployees = employees.filter(emp => emp.department === dept);
-                      const deptSalary = deptEmployees.reduce((sum, emp) => sum + emp.salary, 0);
-                      return (
-                        <div key={dept} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div>
-                            <h3 className="font-medium text-gray-900">{dept}</h3>
-                            <p className="text-sm text-gray-500">{deptEmployees.length} employees</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium text-gray-900">${deptSalary.toLocaleString()}</p>
-                            <p className="text-sm text-gray-500">Total Salary</p>
-                          </div>
+                  {/* Timesheet Report Card */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Timesheet Summary</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Timesheets:</span>
+                        <span className="font-medium">{timesheetSummary?.totalTimesheets || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Hours:</span>
+                        <span className="font-medium">{timesheetSummary?.totalHours?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Overtime:</span>
+                        <span className="font-medium">{timesheetSummary?.totalOvertime?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Avg Hours/Timesheet:</span>
+                        <span className="font-medium">{timesheetSummary?.avgHours?.toFixed(2) || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Approved:</span>
+                        <span className="font-medium text-green-600">{timesheetSummary?.approved || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Pending:</span>
+                        <span className="font-medium text-yellow-600">{timesheetSummary?.pending || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Rejected:</span>
+                        <span className="font-medium text-red-600">{timesheetSummary?.rejected || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Department Breakdown Card */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Department Breakdown</h3>
+                    <div className="space-y-2 text-sm">
+                      {departmentSummary.length === 0 ? (
+                        <div className="text-gray-500">No data</div>
+                      ) : departmentSummary.map(dept => (
+                        <div key={dept.department} className="flex justify-between items-center">
+                          <span className="font-medium">{dept.department}</span>
+                          <span>Total Hours: {dept.totalHours?.toLocaleString() || 0}</span>
+                          <span>Employees: {dept.employeeCount || 0}</span>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Analytics Summary */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Analytics Summary</h2>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{payrollStats.totalEmployees}</div>
-                    <div className="text-sm text-gray-600">Total Employees</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{payrollStats.activeEmployees}</div>
-                    <div className="text-sm text-gray-600">Active Employees</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-600">${Math.round(payrollStats.totalPayroll / payrollStats.totalEmployees).toLocaleString()}</div>
-                    <div className="text-sm text-gray-600">Average Salary</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">${payrollStats.totalPayroll.toLocaleString()}</div>
-                    <div className="text-sm text-gray-600">Total Payroll</div>
-                  </div>
+                {/* Trends Chart */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Timesheet Trends (Monthly)</h3>
+                  {timesheetTrends.length === 0 ? (
+                    <div className="text-gray-500">No trend data</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={timesheetTrends} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey={d => `${d.month}/${d.year}`} />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="totalHours" stroke="#2563eb" name="Total Hours" />
+                        <Line type="monotone" dataKey="totalOvertime" stroke="#f59e42" name="Overtime" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
-              </div>
-            </div>
+                {/* Top Employees Leaderboard */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Employees by Hours Worked</h3>
+                  {topEmployees.length === 0 ? (
+                    <div className="text-gray-500">No data</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={topEmployees} layout="vertical" margin={{ top: 20, right: 30, left: 40, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={120} />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="totalHours" fill="#2563eb" name="Total Hours" />
+                        <Bar dataKey="totalOvertime" fill="#f59e42" name="Overtime" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </main>
@@ -3003,11 +3001,279 @@ const Dashboard = () => {
         timesheet={selectedTimesheet}
       />
 
-      {/* Profile Modal */}
-      <ProfileModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-      />
+      {showProcessPayrollConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="w-6 h-6 text-yellow-500 mr-2" />
+              <h2 className="text-xl font-bold text-gray-900">Confirm Payroll Processing</h2>
+            </div>
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">You are about to process payroll for:</p>
+              <ul className="text-sm text-gray-700 list-disc pl-5 space-y-1">
+                <li><strong>Period:</strong> {payrollPeriod.charAt(0).toUpperCase() + payrollPeriod.slice(1)}</li>
+                <li><strong>Employees:</strong> {payrollStats.activeEmployees}</li>
+                <li><strong>Gross Pay:</strong> ${payrollStats.totalPayroll.toLocaleString()}</li>
+                <li><strong>Estimated Net Pay:</strong> ${Math.round(payrollStats.totalPayroll * 0.6).toLocaleString()}</li>
+              </ul>
+              <p className="mt-3 text-xs text-yellow-600 font-medium">This action cannot be undone. Please review before confirming.</p>
+            </div>
+            {processingPayroll && (
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                <span className="text-primary-600 text-sm">Processing payroll...</span>
+              </div>
+            )}
+            {processPayrollError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-red-700">{processPayrollError}</p>
+              </div>
+            )}
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={async () => {
+                  setProcessingPayroll(true);
+                  setProcessPayrollError(null);
+                  try {
+                    await handleProcessPayroll();
+                    setShowProcessPayrollConfirm(false);
+                    setShowPayrollSuccess(true);
+                  } catch (err) {
+                    setProcessPayrollError('An error occurred while processing payroll.');
+                  } finally {
+                    setProcessingPayroll(false);
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={processingPayroll}
+              >
+                Yes, Process Payroll
+              </button>
+              <button
+                onClick={() => setShowProcessPayrollConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                disabled={processingPayroll}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPayrollSuccess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md text-center">
+            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-green-700 mb-2">Payroll Processed Successfully!</h2>
+            <p className="text-gray-700 mb-4">Payroll for <strong>{payrollPeriod.charAt(0).toUpperCase() + payrollPeriod.slice(1)}</strong> has been processed.</p>
+            <div className="mb-4 text-sm text-gray-600">
+              <div><strong>Employees:</strong> {payrollStats.activeEmployees}</div>
+              <div><strong>Gross Pay:</strong> ${payrollStats.totalPayroll.toLocaleString()}</div>
+              <div><strong>Net Pay:</strong> ${Math.round(payrollStats.totalPayroll * 0.6).toLocaleString()}</div>
+            </div>
+            <button
+              onClick={() => {
+                setShowPayrollSuccess(false);
+                setActiveTab('payroll');
+              }}
+              className="w-full px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 mt-2"
+            >
+              View Payroll History
+            </button>
+          </div>
+        </div>
+      )}
+      {showSummaryBreakdown && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">
+                {showSummaryBreakdown === 'employees' && 'Active Employees'}
+                {showSummaryBreakdown === 'gross' && 'Gross Pay Breakdown'}
+                {showSummaryBreakdown === 'taxes' && 'Estimated Taxes Breakdown'}
+                {showSummaryBreakdown === 'benefits' && 'Benefits Breakdown'}
+                {showSummaryBreakdown === 'net' && 'Net Pay Breakdown'}
+              </h2>
+              <button onClick={() => setShowSummaryBreakdown(null)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                    {showSummaryBreakdown !== 'employees' && (
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {showSummaryBreakdown === 'gross' && 'Gross Pay'}
+                        {showSummaryBreakdown === 'taxes' && 'Taxes'}
+                        {showSummaryBreakdown === 'benefits' && 'Benefits'}
+                        {showSummaryBreakdown === 'net' && 'Net Pay'}
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {employees.filter(emp => emp.status === 'active').map(emp => {
+                    const grossPay = emp.salary / 12;
+                    const taxes = grossPay * 0.25;
+                    const benefits = grossPay * 0.15;
+                    const netPay = grossPay - taxes - benefits;
+                    return (
+                      <tr key={emp._id}>
+                        <td className="px-4 py-2 whitespace-nowrap">{emp.name}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">{emp.position}</td>
+                        {showSummaryBreakdown === 'employees' && null}
+                        {showSummaryBreakdown === 'gross' && (
+                          <td className="px-4 py-2 whitespace-nowrap">${grossPay.toLocaleString()}</td>
+                        )}
+                        {showSummaryBreakdown === 'taxes' && (
+                          <td className="px-4 py-2 whitespace-nowrap">${taxes.toLocaleString()}</td>
+                        )}
+                        {showSummaryBreakdown === 'benefits' && (
+                          <td className="px-4 py-2 whitespace-nowrap">${benefits.toLocaleString()}</td>
+                        )}
+                        {showSummaryBreakdown === 'net' && (
+                          <td className="px-4 py-2 whitespace-nowrap text-green-600">${netPay.toLocaleString()}</td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setShowSummaryBreakdown(null)} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Export Payroll Report</h2>
+              <button onClick={() => setShowExportModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="mb-4 text-gray-700">You are about to export the current payroll report. Choose your format and confirm to proceed.</p>
+            {exportError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-red-700">{exportError}</p>
+              </div>
+            )}
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={async () => {
+                  setExporting(true);
+                  setExportError(null);
+                  try {
+                    handleExportPayrollReport();
+                    setShowExportModal(false);
+                  } catch (err) {
+                    setExportError('An error occurred while exporting.');
+                  } finally {
+                    setExporting(false);
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={exporting}
+              >
+                {exporting ? 'Exporting...' : 'Export as CSV'}
+              </button>
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                disabled={exporting}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Print Payroll Report</h2>
+              <button onClick={() => setShowPrintModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="mb-4 text-gray-700">You are about to print the current payroll report. Confirm to proceed.</p>
+            {printError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-red-700">{printError}</p>
+              </div>
+            )}
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={async () => {
+                  setPrinting(true);
+                  setPrintError(null);
+                  try {
+                    handlePrintPayroll();
+                    setShowPrintModal(false);
+                  } catch (err) {
+                    setPrintError('An error occurred while printing.');
+                  } finally {
+                    setPrinting(false);
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={printing}
+              >
+                {printing ? 'Printing...' : 'Print Report'}
+              </button>
+              <button
+                onClick={() => setShowPrintModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                disabled={printing}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Reject Timesheet</h2>
+            <p className="mb-2 text-gray-700">Please provide a reason for rejection:</p>
+            <textarea
+              className="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              rows={3}
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={confirmRejectTimesheet}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Reject
+              </button>
+              <button
+                onClick={() => { setShowRejectModal(false); setRejectingTimesheet(null); }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {toast.visible && (
+        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'}`}
+          role="alert">
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }
@@ -3293,6 +3559,50 @@ const TimesheetDetailsModal = ({ isOpen, onClose, timesheet }) => {
               </p>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Add ProfilePage component
+const ProfilePage = () => {
+  const { userInfo, userRole, logout } = React.useContext(AuthContext);
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-12 px-4">
+      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md flex flex-col items-center">
+        <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center mb-4">
+          <User className="w-10 h-10 text-primary-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-1">{userInfo?.name || 'User'}</h2>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${
+          userRole === 'admin' ? 'bg-red-100 text-red-800' :
+          userRole === 'manager' ? 'bg-blue-100 text-blue-800' :
+          'bg-green-100 text-green-800'
+        }`}>
+          {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+        </span>
+        <div className="text-sm text-gray-600 mb-2">{userInfo?.email}</div>
+        <div className="text-sm text-gray-600 mb-2">{userInfo?.department}</div>
+        <div className="w-full border-t border-gray-200 my-4"></div>
+        <div className="w-full mb-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-1">Bio</h3>
+          <p className="text-sm text-gray-700">{userInfo?.bio || 'No bio provided.'}</p>
+        </div>
+        <div className="flex w-full space-x-3 mt-4">
+          <button
+            onClick={() => navigate('/login')}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Switch User
+          </button>
+          <button
+            onClick={() => { logout(); navigate('/login'); }}
+            className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </div>

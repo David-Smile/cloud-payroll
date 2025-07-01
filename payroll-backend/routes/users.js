@@ -1,5 +1,6 @@
 const express = require('express');
 const { protect, authorize } = require('../middleware/auth');
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -62,15 +63,18 @@ router.post('/', authorize('admin'), async (req, res) => {
 // @access  Admin only
 router.put('/:id', authorize('admin'), async (req, res) => {
   try {
-    res.json({
-      success: true,
-      message: 'Update user - TODO: Implement'
-    });
+    const updates = (({
+      name, email, role, department, phone, location, bio, isActive, preferences
+    }) => ({ name, email, role, department, phone, location, bio, isActive, preferences }))(req.body);
+    // Remove undefined fields
+    Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
+    const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true }).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, user });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 });
 
@@ -79,15 +83,13 @@ router.put('/:id', authorize('admin'), async (req, res) => {
 // @access  Admin only
 router.delete('/:id', authorize('admin'), async (req, res) => {
   try {
-    res.json({
-      success: true,
-      message: 'Delete user - TODO: Implement'
-    });
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, message: 'User deleted' });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 });
 

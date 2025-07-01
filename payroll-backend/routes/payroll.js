@@ -133,7 +133,8 @@ router.post('/', authorize('admin'), [
       netAmount,
       payrollItems,
       notes,
-      processedBy: req.user.id
+      processedBy: req.user.id,
+      processedAt: Date.now()
     });
 
     const populatedPayroll = await Payroll.findById(payroll._id)

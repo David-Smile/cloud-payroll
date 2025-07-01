@@ -11,22 +11,29 @@
     "install-prod": "npm install --omit=dev",
     "postinstall": "npm prune --omit=dev"
   },
-  "keywords": ["payroll", "api", "express", "mongodb", "authentication"],
+  "keywords": [
+    "payroll",
+    "api",
+    "express",
+    "mongodb",
+    "authentication"
+  ],
   "author": "Cloud Payroll Team",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
+    "@faker-js/faker": "^9.8.0",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "bcryptjs": "^2.4.3",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
-    "morgan": "^1.10.0",
-    "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.5",
-    "express-validator": "^7.0.1"
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.1.10"
   }
 }
